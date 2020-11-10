@@ -60,15 +60,18 @@ function Prompt-ExchangeDownload {
     $downloadResult = $Host.UI.PromptForChoice("Server deployment script","Would you like to download the latest Exchange server Cumulative Update?", $yesNoOption, 0)
     if($downloadResult -eq 0) {
         switch($exVersion) {
-            2{
-                Write-Host "Downloading Exchange 2019 CU7..." -ForegroundColor Green -NoNewline
-                $Url = "https://download.my.visualstudio.com/pr/mu_exchange_server_2019_cumulative_update_7_x64_dvd_3603666d.iso?t=505d24ad-6ccd-488d-8798-0bf4a7ed8cca&e=1604457988&h=eb547a7e58861fc20197d3612ed612d5&su=1"
-                $Path = "C:\Temp\Exchange2019_CU7.iso"
-                $webClient = New-Object System.Net.WebClient
-                $webClient.DownloadFile($url, $path)
-                Write-Host "COMPLETE"
-                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $path)
-                Mount-DiskImage -ImagePath $path}
+            2{  Write-Warning "You must download the ISO before running this script."
+                Write-Host "Exchange 2019 can be downloaded at https://my.visualstudio.com/Downloads" -ForegroundColor Cyan
+                #Write-Host "Downloading Exchange 2019 CU7..." -ForegroundColor Green -NoNewline
+                #$Url = "https://download.my.visualstudio.com/pr/mu_exchange_server_2019_cumulative_update_7_x64_dvd_3603666d.iso?t=505d24ad-6ccd-488d-8798-0bf4a7ed8cca&e=1604457988&h=eb547a7e58861fc20197d3612ed612d5&su=1"
+                #$Path = "C:\Temp\Exchange2019_CU7.iso"
+                #$webClient = New-Object System.Net.WebClient
+                #$webClient.DownloadFile($url, $path)
+                #Write-Host "COMPLETE"
+                #Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $path)
+                #Mount-DiskImage -ImagePath $path}
+                exit
+                }
             1{
                 Write-Host "Downloading Exchange 2016 CU18..." -ForegroundColor Green -NoNewline
                 $Url = "https://download.microsoft.com/download/d/2/3/d23b113b-9634-4456-acba-1f7b0ce22b0e/ExchangeServer2016-x64-cu18.iso"
@@ -520,7 +523,8 @@ switch ($exInstallType) {
         ## Get the setup path for the Exchange install
         if($SetupExePath -like $null) { 
             Prompt-ExchangeDownload
-            Get-ExchangeExe 
+            if($SetupExePath -like $null) {Get-ExchangeExe}
+            else{Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $SetupExePath)}
         }
         switch ($exVersion) {
             2 { $exMbxRole = New-Object System.Management.Automation.Host.ChoiceDescription '&Mailbox', 'Mailbox server role'
@@ -617,7 +621,8 @@ switch ($exInstallType) {
         ## Get the ISO for Exchange install
         if($SetupExePath -like $null) { 
             Prompt-ExchangeDownload
-            Get-ExchangeExe 
+            if($SetupExePath -like $null) {Get-ExchangeExe}
+            else{Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $SetupExePath)}
         }
         ## Clearing Edge Sync credentials to allow server to be recovered that is part of an Edge subscription
         Write-Host "Removing any Edge Sync credentials that may be present..." -ForegroundColor Green -NoNewline
