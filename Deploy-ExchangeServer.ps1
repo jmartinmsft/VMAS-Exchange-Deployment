@@ -323,7 +323,7 @@ function Get-CertificateFromServerCheck {
 function Get-ServerCertificate {
     ## Determine the SSL binding information for the Default Web Site
     $scriptBlock = { Import-Module WebAdministration;
-        (Get-WebBinding -Name "Default Web Site" -Protocol https | Where {$_.bindingInformation -eq ":443:" }).certificateHash
+        (Get-WebBinding -Name "Default Web Site" -Protocol https | Where {$_.bindingInformation -notlike "127.0.0.1:443:" }).certificateHash
     }
     Set-Item -Path WSMan:\localhost\Client\TrustedHosts -Value $certServer -Force
     $session = New-PSSession -Credential $credential -ComputerName $certServer -Name CertificateConfig
@@ -523,8 +523,11 @@ switch ($exInstallType) {
         ## Get the setup path for the Exchange install
         if($SetupExePath -like $null) { 
             Prompt-ExchangeDownload
-            if($SetupExePath -like $null) {Get-ExchangeExe}
-            else{Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $SetupExePath)}
+            Get-ExchangeExe
+        }
+        else{
+            $SetupExePath = $SetupExePath.Replace("\","\\")
+            Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $SetupExePath)
         }
         switch ($exVersion) {
             2 { $exMbxRole = New-Object System.Management.Automation.Host.ChoiceDescription '&Mailbox', 'Mailbox server role'
@@ -621,8 +624,11 @@ switch ($exInstallType) {
         ## Get the ISO for Exchange install
         if($SetupExePath -like $null) { 
             Prompt-ExchangeDownload
-            if($SetupExePath -like $null) {Get-ExchangeExe}
-            else{Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $SetupExePath)}
+            Get-ExchangeExe
+        }
+        else{
+            $SetupExePath = $SetupExePath.Replace("\","\\")
+            Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $SetupExePath)
         }
         ## Clearing Edge Sync credentials to allow server to be recovered that is part of an Edge subscription
         Write-Host "Removing any Edge Sync credentials that may be present..." -ForegroundColor Green -NoNewline
