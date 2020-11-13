@@ -94,8 +94,16 @@ function Prompt-ExchangeDownload {
         }
     }
     else {
-        $isoResult = $Host.UI.PromptForChoice("Server deployment script","Would you like to mount an Exchange ISO now?", $yesNoOption, 0)
-        if($isoResult -eq 0) {Get-ExchangeISO}
+        if($exVersion -ne 0) {
+            if($SetupExePath -like $null) {
+                $isoResult = $Host.UI.PromptForChoice("Server deployment script","Would you like to mount an Exchange ISO now?", $yesNoOption, 0)
+                if($isoResult -eq 0) {Get-ExchangeISO}
+            }
+            else {
+                $isoResult = $Host.UI.PromptForChoice("Server deployment script","Is an Exchange ISO mounted locally?", $yesNoOption, 0)
+                if($isoResult -eq 0) {Get-ExchangeISO}
+            }
+        }
     }
 }
 function Check-ExchangeVersion {
@@ -241,7 +249,7 @@ function Get-DomainControllers {
 }
 function Connect-Exchange {
     Write-Host "Connecting an Exchange remote PowerShell session to $exchServer..." -ForegroundColor Green
-    try { Import-PSSession (New-PSSession -Name ExchangeShell -ConfigurationName Microsoft.Exchange -ConnectionUri http://$exchServer/PowerShell -AllowRedirection -Authentication Kerberos -SessionOption (New-PSSessionOption -SkipCACheck -SkipCNCheck) -ErrorAction Ignore) -AllowClobber -ErrorAction Ignore}
+    try { Import-PSSession (New-PSSession -Name ExchangeShell -ConfigurationName Microsoft.Exchange -ConnectionUri http://$exchServer/PowerShell -AllowRedirection -Authentication Kerberos -SessionOption (New-PSSessionOption -SkipCACheck -SkipCNCheck) -ErrorAction Ignore) -AllowClobber -ErrorAction Stop | Out-Null}
     catch { Write-Warning "Connection attempt to $exchServer failed. Retrying..."
         Start-Sleep -Seconds 5
         Connect-Exchange
@@ -418,8 +426,7 @@ $UserName = $env:USERNAME
 $upn = "$UserName@$domain"
 $credential = Get-Credential -UserName $upn -Message "Domain admin credentials"
 [string]$domainController = (Resolve-DnsName $domain -Type SRV -Server $tempDNS -ErrorAction Ignore).PrimaryServer
-$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($credential.Password)            
-$Password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+$Password = $credential.GetNetworkCredential().Password
 ## Check if the account is a member of domain admins
 Write-Host "Checking account permissions..." -ForegroundColor Green
 Write-Host "Using $UserName from the $Domain domain for the install" -ForegroundColor Cyan
