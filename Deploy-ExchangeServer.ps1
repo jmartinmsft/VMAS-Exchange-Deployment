@@ -33,6 +33,10 @@ param(
     [Parameter(Mandatory=$false)] [string]$SetupExePath
 )
 Clear-Host
+function Test-ADAuthentication {
+    $UserName = $UserName.Substring(0, $UserName.IndexOf("@"))
+    (New-Object DirectoryServices.DirectoryEntry "",$UserName,$Password).PsBase.Name -ne $null
+}
 function Check-ServerCore {
     if((Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\').InstallationType -eq "Server Core") {
         Add-Content -Path $serverVarFile -Value ('res_0037 = 1')
@@ -463,6 +467,7 @@ if($exchContainer.DistinguishedName.Length -gt 0) {
         Write-Host "Checking for existing Exchange servers..." -ForegroundColor Green
         $exchServers = Get-ADObject -LDAPFilter "(objectClass=msExchExchangeServer)" -SearchBase $exchServersContainer -SearchScope OneLevel -Properties msExchCurrentServerRoles
         if($exchServers.Count -gt 0) {
+            $exchOrgPresent = $true
             if($exchServers -match $ServerName) {
                 Write-Warning "This is a recover server"
                 $exInstallType = 1
@@ -482,7 +487,6 @@ if($exchContainer.DistinguishedName.Length -gt 0) {
         }
     }
     else { Write-Host "No Exchange organization found." -ForegroundColor Green}
-    $exchOrgPresent = $true
     $exchServer = $exchServer.Name
 }
 ## Check for an Exchange management session, otherwise verify there is no Exchange organization in the forest
