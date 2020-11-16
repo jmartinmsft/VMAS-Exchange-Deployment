@@ -457,6 +457,7 @@ $exchServer = $null
 $exchOrgPresent = $false
 Import-Module ActiveDirectory
 $exchServer = $null
+$exInstallType = 0
 $adDomain = (Get-ADDomain -ErrorAction Ignore).DistinguishedName
 Write-Host "Check for an Exchange organization..." -ForegroundColor Green
 $servicesContainer = "CN=Services,CN=Configuration,$adDomain"
@@ -471,11 +472,6 @@ if($exchContainer.DistinguishedName.Length -gt 0) {
             if($exchServers -match $ServerName) {
                 Write-Warning "This is a recover server"
                 $exInstallType = 1
-                Add-Content -Path $serverVarFile -Value ('res_0004 = 1')
-            }
-            else {
-                $exInstallType = 0
-                Add-Content -Path $serverVarFile -Value ('res_0004 = 0')
             }
             $serverFound = $false
             while($serverFound -eq $false) {
@@ -489,6 +485,7 @@ if($exchContainer.DistinguishedName.Length -gt 0) {
     else { Write-Host "No Exchange organization found." -ForegroundColor Green}
     $exchServer = $exchServer.Name
 }
+Add-Content -Path $serverVarFile -Value ('res_0004 = ' + $exInstallType)
 ## Check for an Exchange management session, otherwise verify there is no Exchange organization in the forest
 if(!(Get-PSSession | Where { $_.ConfigurationName -eq "Microsoft.Exchange" } )) {
     if($exchOrgPresent -eq $true) { Connect-Exchange }
