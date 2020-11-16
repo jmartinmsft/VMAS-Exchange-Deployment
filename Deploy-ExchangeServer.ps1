@@ -575,6 +575,7 @@ switch ($exInstallType) {
             }
         }
         ## Get hostname values for the Exchange virtual directories
+
         $intHostname = (Read-HostWithColor "Enter the hostname for the internal URLs: ").ToLower()
         Add-Content -Path $serverVarFile -Value ('res_0020 = ' + $intHostname)
         $extHostname = (Read-HostWithColor "Enter the hostname for the external URLs: ").ToLower()
@@ -801,13 +802,13 @@ Add-Content -Path $serverVarFile -Value '###PSLOC'
 Add-Content -Path $serverVarFile -Value "'@"
 Write-Host "Removing the Exchange remote PowerShell session..." -ForegroundColor Green
 ## Disconnect from the Exchange remote PowerShell session
-Remove-PSSession -Name ExchangeShell
+Remove-PSSession -Name ExchangeShell -ErrorAction Ignore
 Write-Host "Disabling IPv6..." -ForegroundColor Green -NoNewline
 New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\ -Name DisabledComponents -Value "0xff" -PropertyType DWORD -ErrorAction SilentlyContinue | Out-Null
 Write-Host "COMPLETE"
 ## Get variables from previous user input
 Write-Host "Getting variables for setup..." -ForegroundColor Green -NoNewline
-Import-LocalizedData -BindingVariable ExchangeInstall_LocalizedStrings -FileName $ServerName"-ExchangeInstall-strings.psd1"
+Import-LocalizedData -BindingVariable ExchangeInstall_LocalizedStrings -FileName $ServerName"-ExchangeInstall-strings.psd1" -BaseDirectory c:\Temp
 Write-Host "COMPLETE"
 $RunOnceKey = "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" 
 $WinLogonKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
