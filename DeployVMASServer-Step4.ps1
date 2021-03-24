@@ -336,6 +336,8 @@ switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking new or restore
                 }
             }
             2 { ## Standalone server install
+                ## Install critical March 2021 security update
+                if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-KB5000871}
                 Write-Host "Server installation complete"
                 Restart-Computer
             }
@@ -343,6 +345,8 @@ switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking new or restore
     }
     1 { ## This was a recover server and must determine whether a DAG member or standalone server
         if($DagName -eq $null) {
+            ## Install critical March 2021 security update
+            if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-KB5000871}
             Write-Host "Server installation complete"
             Start-Sleep -Seconds 5
             Restart-Computer
@@ -412,4 +416,6 @@ if($ExchangeInstall_LocalizedStrings.res_0004 -eq 1 -and $DagName -ne $null) {
     }
 }
 ## Exchange server setup is complete
+## Install critical March 2021 security update
+if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-KB5000871}
 Restart-Computer
