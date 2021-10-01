@@ -1,9 +1,9 @@
 ﻿<#
 # DeployVMASServer-Step4.ps1
-# Modified 2020/11/07
+# Modified 2021/10/01
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.0
+# Version: v1.1
 
 # Script should automatically start when the virtual machine starts
 # Syntax for running this script:
@@ -11,27 +11,34 @@
 # .\DeployVMASServer-Step4.ps1
 #
 #
-##############################################################################################
-#
-# This script is not officially supported by Microsoft, use it at your own risk.
-# Microsoft has no liability, obligations, warranty, or responsibility regarding
-# any result produced by use of this file.
-#
-##############################################################################################
-# The sample scripts are not supported under any Microsoft standard support
-# program or service. The sample scripts are provided AS IS without warranty
-# of any kind. Microsoft further disclaims all implied warranties including, without
-# limitation, any implied warranties of merchantability or of fitness for a particular
-# purpose. The entire risk arising out of the use or performance of the sample scripts
-# and documentation remains with you. In no event shall Microsoft, its authors, or
-# anyone else involved in the creation, production, or delivery of the scripts be liable
-# for any damages whatsoever (including, without limitation, damages for loss of business
-# profits, business interruption, loss of business information, or other pecuniary loss)
-# arising out of the use of or inability to use the sample scripts or documentation,
-# even if Microsoft has been advised of the possibility of such damages
-##############################################################################################
+//***********************************************************************
+//
+// Copyright (c) 2018 Microsoft Corporation. All rights reserved.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+//**********************************************************************​
 #>
 ## Functions for Exchange configuration
+function Install-Exch2013SU {
+    ## Download and install July 2021 Security Update for Exchange 2013 CU23
+    Write-Host "Downloading Security Update for Exchange 2013 CU23..." -ForegroundColor Green 
+    Invoke-WebRequest -Uri "https://download.microsoft.com/download/2/e/0/2e0bcd42-e604-4bc0-afce-460e05189a2e/Exchange2013-KB5004778-x64-en.msp" -OutFile "C:\Temp\Exchange2013-KB5004778-x64-en.msp" 
+    Write-Host "Installing Security Update for Exchange 2013 CU23..." -ForegroundColor Green 
+    Start-Process -FilePath powershell -Verb Runas -ArgumentList "C:\Temp\Exchange2013-KB5004778-x64-en.msp /passive /norestart"
+    Start-Sleep -Seconds 10
+    while(Get-Process msiexec | where {$_.MainWindowTitle -eq "Security Update for Exchange Server 2013 Cumulative Update 23 (KB5004778)"} -ErrorAction SilentlyContinue) {
+        Write-Host "..." -ForegroundColor Green -NoNewline
+        Start-Sleep -Seconds 10
+    }
+    Write-Host "COMPLETE"
+}
 function Get-DomainControllers {
     ## Get one online domain controller for each site to confirm AD replication
     $sites = New-Object System.Collections.ArrayList
@@ -337,7 +344,7 @@ switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking new or restore
             }
             2 { ## Standalone server install
                 ## Install critical March 2021 security update
-                if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-KB5000871}
+                if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-Exch2013SU}
                 Write-Host "Server installation complete"
                 Restart-Computer
             }
@@ -346,7 +353,7 @@ switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking new or restore
     1 { ## This was a recover server and must determine whether a DAG member or standalone server
         if($DagName -eq $null) {
             ## Install critical March 2021 security update
-            if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-KB5000871}
+            if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-Exch2013SU}
             Write-Host "Server installation complete"
             Start-Sleep -Seconds 5
             Restart-Computer
@@ -417,5 +424,38 @@ if($ExchangeInstall_LocalizedStrings.res_0004 -eq 1 -and $DagName -ne $null) {
 }
 ## Exchange server setup is complete
 ## Install critical March 2021 security update
-if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-KB5000871}
+if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-Exch2013SU}
 Restart-Computer
+# SIG # Begin signature block
+# MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
+# BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDbTKpxqT7lgdFb
+# VgHYwVDy9JpQNspaHjHpGOlVgnKraqCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
+# u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
+# cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
+# BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
+# ggEPADCCAQoCggEBAMSWhFMKzV8qMywbj1H6lg4h+cvR9CtxmQ1J3V9uf9+R2d9p
+# laoDqCNS+q8wz+t+QffvmN2YbcsHrXp6O7bF+xYjuPtIurv8wM69RB/Uy1xvsUKD
+# L/ZDQZ0zewMDLb5Nma7IYJCPYelHiSeO0jsyLXTnaOG0Rq633SUkuPv+C3N8GzVs
+# KDnxozmHGYq/fdQEv9Bpci2DkRTtnHvuIreeqsg4lICeTIny8jMY4yC6caQkamzp
+# GcJWWO0YZlTQOaTgHoVVnSZAvdJhzxIX2wqd0/VaVIbpN0HcPKtMrgXv0O2Bl4Lo
+# tmZR7za7H6hamxaPYQHHyReFs2xM7hlVVWhnfpECAwEAAaNoMGYwDgYDVR0PAQH/
+# BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMDMCAGA1UdEQQZMBeCFWptYXJ0aW5A
+# bWljcm9zb2Z0LmNvbTAdBgNVHQ4EFgQUCB04A8myETdoRJU9zsScvFiRGYkwDQYJ
+# KoZIhvcNAQELBQADggEBAEjsxpuXMBD72jWyft6pTxnOiTtzYykYjLTsh5cRQffc
+# z0sz2y+jL2WxUuiwyqvzIEUjTd/BnCicqFC5WGT3UabGbGBEU5l8vDuXiNrnDf8j
+# zZ3YXF0GLZkqYIZ7lUk7MulNbXFHxDwMFD0E7qNI+IfU4uaBllsQueUV2NPx4uHZ
+# cqtX4ljWuC2+BNh09F4RqtYnocDwJn3W2gdQEAv1OQ3L6cG6N1MWMyHGq0SHQCLq
+# QzAn5DpXfzCBAePRcquoAooSJBfZx1E6JeV26yw2sSnzGUz6UMRWERGPeECSTz3r
+# 8bn3HwYoYcuV+3I7LzEiXOdg3dvXaMf69d13UhMMV1sxggHdMIIB2QIBATA0MCAx
+# HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
+# NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
+# AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
+# CSqGSIb3DQEJBDEiBCCnBOGhDOqYKnHD7rGbV9xjQfKAmrpwk6bXIjSDEl6HXTAN
+# BgkqhkiG9w0BAQEFAASCAQB/lX5of2fzi0pnD82XPwAkQ9UilG26AHAqijWuMgyF
+# MEX3DG81+vPV0QTlHPvR/rvxtD5Nae+Sgeh3gCmMByWA8BKVRG+REcb49PjsV/sA
+# zZ+q9deb5wZa7BZfNODy5oXrq/yYEMDYfJt6QXUNaO3c7mooPfxw5PLFmNH+lk4J
+# T9w0o9AKMR7Mxf1mLXOw9SroXHtws02K4bWcM03tmegHV38rKL1k+eucfwyiw8/4
+# J8mJJK5muLIUgtD0E6ovFUxGRRpG6AZ8lAyOE8O0xr5n+EPLYmPL0WjNmo8hl9rd
+# OuTH5V7Kv9kx/RIFhEPHwXvWKcSKsPjalsOOMrbYmz9l
+# SIG # End signature block
