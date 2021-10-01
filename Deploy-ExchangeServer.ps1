@@ -1,33 +1,27 @@
 ﻿<#
 # Deploy-ExchangeServer.ps1
-# Modified 2020/11/07
+# Modified 2021/10/01
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.0
+# Version: v1.1
 # Syntax for running this script:
 #
 # .\Deploy-ExchangeServer.ps1
 #
 #
-##############################################################################################
-#
-# This script is not officially supported by Microsoft, use it at your own risk.
-# Microsoft has no liability, obligations, warranty, or responsibility regarding
-# any result produced by use of this file.
-#
-##############################################################################################
-# The sample scripts are not supported under any Microsoft standard support
-# program or service. The sample scripts are provided AS IS without warranty
-# of any kind. Microsoft further disclaims all implied warranties including, without
-# limitation, any implied warranties of merchantability or of fitness for a particular
-# purpose. The entire risk arising out of the use or performance of the sample scripts
-# and documentation remains with you. In no event shall Microsoft, its authors, or
-# anyone else involved in the creation, production, or delivery of the scripts be liable
-# for any damages whatsoever (including, without limitation, damages for loss of business
-# profits, business interruption, loss of business information, or other pecuniary loss)
-# arising out of the use of or inability to use the sample scripts or documentation,
-# even if Microsoft has been advised of the possibility of such damages
-##############################################################################################
+//***********************************************************************
+//
+// Copyright (c) 2018 Microsoft Corporation. All rights reserved.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+//**********************************************************************​
 #>
 param(
     [Parameter(Mandatory=$false)] [string]$SetupExePath
@@ -64,22 +58,19 @@ function Prompt-ExchangeDownload {
     $downloadResult = $Host.UI.PromptForChoice("Server deployment script","Would you like to download the latest Exchange server Cumulative Update?", $yesNoOption, 0)
     if($downloadResult -eq 0) {
         switch($exVersion) {
-            2{  Write-Warning "You must download the ISO before running this script."
-                Write-Host "Exchange 2019 can be downloaded at https://my.visualstudio.com/Downloads" -ForegroundColor Cyan
-                #Write-Host "Downloading Exchange 2019 CU7..." -ForegroundColor Green -NoNewline
-                #$Url = "https://download.my.visualstudio.com/pr/mu_exchange_server_2019_cumulative_update_7_x64_dvd_3603666d.iso?t=505d24ad-6ccd-488d-8798-0bf4a7ed8cca&e=1604457988&h=eb547a7e58861fc20197d3612ed612d5&su=1"
-                #$Path = "C:\Temp\Exchange2019_CU7.iso"
-                #$webClient = New-Object System.Net.WebClient
-                #$webClient.DownloadFile($url, $path)
-                #Write-Host "COMPLETE"
-                #Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $path)
-                #Mount-DiskImage -ImagePath $path}
-                exit
-                }
+            2{  
+                Write-Host "Downloading Exchange 2019 CU11..." -ForegroundColor Green -NoNewline
+                $Url = "https://download.microsoft.com/download/5/3/e/53e75dbd-ca33-496a-bd23-1d861feaa02a/ExchangeServer2019-x64-CU11.ISO"
+                $Path = "C:\Temp\Exchange2019_CU11.iso"
+                $webClient = New-Object System.Net.WebClient
+                $webClient.DownloadFile($url, $path)
+                Write-Host "COMPLETE"
+                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $path)
+                Mount-DiskImage -ImagePath $path}
             1{
-                Write-Host "Downloading Exchange 2016 CU18..." -ForegroundColor Green -NoNewline
-                $Url = "https://download.microsoft.com/download/d/2/3/d23b113b-9634-4456-acba-1f7b0ce22b0e/ExchangeServer2016-x64-cu18.iso"
-                $Path = "C:\Temp\Exchange2016_CU18.iso"
+                Write-Host "Downloading Exchange 2016 CU22..." -ForegroundColor Green -NoNewline
+                $Url = "https://download.microsoft.com/download/f/0/e/f0e65686-3761-4c9d-b8b2-9fb71a207b8d/ExchangeServer2016-x64-CU22.ISO"
+                $Path = "C:\Temp\Exchange2016_CU22.iso"
                 $webClient = New-Object System.Net.WebClient
                 $webClient.DownloadFile($url, $path)
                 Write-Host "COMPLETE"
@@ -530,6 +521,7 @@ switch ($exInstallType) {
         }
         ## Get the setup path for the Exchange install
         if($SetupExePath -like $null) { 
+            Write-Warning "You must download the ISO before running this script."
             Prompt-ExchangeDownload
             Get-ExchangeExe
         }
@@ -877,3 +869,36 @@ switch ($ExchangeInstall_LocalizedStrings.res_0003) { ## Checking the version of
 }
 Write-Host "COMPLETE"
 Restart-Computer -Force
+# SIG # Begin signature block
+# MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
+# BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCNlmK2u76Uu5hN
+# SmcepTooOF5Oai1QNUgsiRSydzpKZqCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
+# u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
+# cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
+# BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
+# ggEPADCCAQoCggEBAMSWhFMKzV8qMywbj1H6lg4h+cvR9CtxmQ1J3V9uf9+R2d9p
+# laoDqCNS+q8wz+t+QffvmN2YbcsHrXp6O7bF+xYjuPtIurv8wM69RB/Uy1xvsUKD
+# L/ZDQZ0zewMDLb5Nma7IYJCPYelHiSeO0jsyLXTnaOG0Rq633SUkuPv+C3N8GzVs
+# KDnxozmHGYq/fdQEv9Bpci2DkRTtnHvuIreeqsg4lICeTIny8jMY4yC6caQkamzp
+# GcJWWO0YZlTQOaTgHoVVnSZAvdJhzxIX2wqd0/VaVIbpN0HcPKtMrgXv0O2Bl4Lo
+# tmZR7za7H6hamxaPYQHHyReFs2xM7hlVVWhnfpECAwEAAaNoMGYwDgYDVR0PAQH/
+# BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMDMCAGA1UdEQQZMBeCFWptYXJ0aW5A
+# bWljcm9zb2Z0LmNvbTAdBgNVHQ4EFgQUCB04A8myETdoRJU9zsScvFiRGYkwDQYJ
+# KoZIhvcNAQELBQADggEBAEjsxpuXMBD72jWyft6pTxnOiTtzYykYjLTsh5cRQffc
+# z0sz2y+jL2WxUuiwyqvzIEUjTd/BnCicqFC5WGT3UabGbGBEU5l8vDuXiNrnDf8j
+# zZ3YXF0GLZkqYIZ7lUk7MulNbXFHxDwMFD0E7qNI+IfU4uaBllsQueUV2NPx4uHZ
+# cqtX4ljWuC2+BNh09F4RqtYnocDwJn3W2gdQEAv1OQ3L6cG6N1MWMyHGq0SHQCLq
+# QzAn5DpXfzCBAePRcquoAooSJBfZx1E6JeV26yw2sSnzGUz6UMRWERGPeECSTz3r
+# 8bn3HwYoYcuV+3I7LzEiXOdg3dvXaMf69d13UhMMV1sxggHdMIIB2QIBATA0MCAx
+# HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
+# NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
+# AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
+# CSqGSIb3DQEJBDEiBCDACIJr5VH2mjERWJLGKtX5FuLGL6xMcJHwZ5ga8pvQeDAN
+# BgkqhkiG9w0BAQEFAASCAQB35GA3KBBo4EJCj5lV/q2IY5h+bSGngKFUmm67axbA
+# jFnCUKCxakgAXxvaa0u2XfMl8crEd5PlIZazSgaDX7o459INka8UZ+muj1jt8lO/
+# Y64vihxQtdVhjWO9Zqwaw6/j8FhETsMuKD+ppc4MbFOYRxW3DVm4W078oTc8Hj4u
+# rhyVIhdP+LLUysWT31lSpdqZQYYMf1mEqc1tRcjwYL7TalgEo5xGpnGHP+OfmY6I
+# 1F/yY6xJPzzS2KAnu2xBIaanfNuydDTlZ2Bru+wOyJtUMMliDmW+7T7sJvxc60ku
+# lQd089A+3PVg7dcj3turFKiJE29P+bBumBBs8v+K2LEM
+# SIG # End signature block
