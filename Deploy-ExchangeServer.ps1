@@ -63,19 +63,23 @@ function Prompt-ExchangeDownload {
                 $Url = "https://download.microsoft.com/download/5/3/e/53e75dbd-ca33-496a-bd23-1d861feaa02a/ExchangeServer2019-x64-CU11.ISO"
                 $Path = "C:\Temp\Exchange2019_CU11.iso"
                 $webClient = New-Object System.Net.WebClient
-                $webClient.DownloadFile($url, $path)
+                $webClient.DownloadFile($url, $Path)
                 Write-Host "COMPLETE"
-                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $path)
-                Mount-DiskImage -ImagePath $path}
+                Mount-DiskImage -ImagePath $Path
+                $Path = $Path.Replace("\", "\\")
+                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $Path)
+                }
             1{
                 Write-Host "Downloading Exchange 2016 CU22..." -ForegroundColor Green -NoNewline
                 $Url = "https://download.microsoft.com/download/f/0/e/f0e65686-3761-4c9d-b8b2-9fb71a207b8d/ExchangeServer2016-x64-CU22.ISO"
                 $Path = "C:\Temp\Exchange2016_CU22.iso"
                 $webClient = New-Object System.Net.WebClient
-                $webClient.DownloadFile($url, $path)
+                $webClient.DownloadFile($url, $Path)
                 Write-Host "COMPLETE"
-                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $path)
-                Mount-DiskImage -ImagePath $path}
+                Mount-DiskImage -ImagePath $Path
+                $Path = $Path.Replace("\", "\\")
+                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $Path)
+                }
             0{
                 Write-Host "Downloading Exchange 2013 CU23..." -ForegroundColor Green -NoNewline
                 $Url = "https://download.microsoft.com/download/7/F/D/7FDCC96C-26C0-4D49-B5DB-5A8B36935903/Exchange2013-x64-cu23.exe"
@@ -405,7 +409,7 @@ if($isServerCore -eq $true -and $SetupExePath -like $null) {
         Start-Sleep -Seconds 3
         break
 }
-Write-Warning "You should  have the Exchange installation files download before continuing."
+Write-Warning "You will have the option to download the Exchange installation files if needed."
 Start-Sleep -Seconds 3
 Add-Type -AssemblyName System.Windows.Forms
 ## Ensure the AD PowerShell module is installed
@@ -450,7 +454,7 @@ Import-Module ActiveDirectory
 $exchServer = $null
 $exInstallType = 0
 $adDomain = (Get-ADDomain -ErrorAction Ignore).DistinguishedName
-Write-Host "Check for an Exchange organization..." -ForegroundColor Green
+Write-Host "Checking for an Exchange organization..." -ForegroundColor Green
 $servicesContainer = "CN=Services,CN=Configuration,$adDomain"
 $exchContainer = Get-ADObject -LDAPFilter "(objectClass=msExchConfigurationContainer)" -SearchBase $servicesContainer -SearchScope OneLevel -ErrorAction Ignore
 if($exchContainer.DistinguishedName.Length -gt 0) {
