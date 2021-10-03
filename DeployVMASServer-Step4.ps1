@@ -1,9 +1,9 @@
 ﻿<#
 # DeployVMASServer-Step4.ps1
-# Modified 2021/10/01
+# Modified 2021/10/03
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.1
+# Version: v1.2
 
 # Script should automatically start when the virtual machine starts
 # Syntax for running this script:
@@ -426,11 +426,12 @@ if($ExchangeInstall_LocalizedStrings.res_0004 -eq 1 -and $DagName -ne $null) {
 ## Install critical March 2021 security update
 if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {Install-Exch2013SU}
 Restart-Computer
+
 # SIG # Begin signature block
 # MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDbTKpxqT7lgdFb
-# VgHYwVDy9JpQNspaHjHpGOlVgnKraqCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDVBO/Ab3QV3TSG
+# F8Rt00vtQ+CWMHsCGxbj/EXL9Qn+L6CCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
 # u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
 # cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
 # BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
@@ -451,11 +452,11 @@ Restart-Computer
 # HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
 # NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
 # AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
-# CSqGSIb3DQEJBDEiBCCnBOGhDOqYKnHD7rGbV9xjQfKAmrpwk6bXIjSDEl6HXTAN
-# BgkqhkiG9w0BAQEFAASCAQB/lX5of2fzi0pnD82XPwAkQ9UilG26AHAqijWuMgyF
-# MEX3DG81+vPV0QTlHPvR/rvxtD5Nae+Sgeh3gCmMByWA8BKVRG+REcb49PjsV/sA
-# zZ+q9deb5wZa7BZfNODy5oXrq/yYEMDYfJt6QXUNaO3c7mooPfxw5PLFmNH+lk4J
-# T9w0o9AKMR7Mxf1mLXOw9SroXHtws02K4bWcM03tmegHV38rKL1k+eucfwyiw8/4
-# J8mJJK5muLIUgtD0E6ovFUxGRRpG6AZ8lAyOE8O0xr5n+EPLYmPL0WjNmo8hl9rd
-# OuTH5V7Kv9kx/RIFhEPHwXvWKcSKsPjalsOOMrbYmz9l
+# CSqGSIb3DQEJBDEiBCBogaep5yMzkdm+D4Ajyn93HQW0IaPmJQVYAtHfBoYwPTAN
+# BgkqhkiG9w0BAQEFAASCAQAl5FlREHLy+bq/UMPKaewx+q1p8OlaN+z1HMUfd52V
+# xuB7AlH+tmftEn1cEosWelA4bI0OhK5YfqG0y3OSrmcPoqGvWltTi4X04YvkdnvW
+# vwCgHPdihqJgjjMKril3deI3gxUUr79xzUW4KtL0J8QHscRMhuRa4TF65ng/8w/U
+# HBXD3BQ56cg6pPmE1tkzecF1plY/QrNtW2X2HvQ9cm3zsItbCWxyVBymCBQ6qJ55
+# sCkdHOqiXucXsBJhQ2wjPQ8YByH5Q+96SkZeKFNOqonznl4e5B8q0J/jt5V62/8Y
+# bwUhgMTfHXD+DcDj2UiAcBPlb1E+U7K9elFzFlJbWTCp
 # SIG # End signature block
