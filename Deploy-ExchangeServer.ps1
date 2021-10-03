@@ -1,9 +1,9 @@
 ﻿<#
 # Deploy-ExchangeServer.ps1
-# Modified 2021/10/01
+# Modified 2021/10/03
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.1
+# Version: v1.2
 # Syntax for running this script:
 #
 # .\Deploy-ExchangeServer.ps1
@@ -66,8 +66,8 @@ function Prompt-ExchangeDownload {
                 $webClient.DownloadFile($url, $Path)
                 Write-Host "COMPLETE"
                 Mount-DiskImage -ImagePath $Path
-                $Path = $Path.Replace("\", "\\")
-                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $Path)
+                $Path = $Path.Replace("\","\\")
+                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $path)
                 }
             1{
                 Write-Host "Downloading Exchange 2016 CU22..." -ForegroundColor Green -NoNewline
@@ -77,7 +77,7 @@ function Prompt-ExchangeDownload {
                 $webClient.DownloadFile($url, $Path)
                 Write-Host "COMPLETE"
                 Mount-DiskImage -ImagePath $Path
-                $Path = $Path.Replace("\", "\\")
+                $Path = $Path.Replace("\","\\")
                 Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $Path)
                 }
             0{
@@ -409,7 +409,7 @@ if($isServerCore -eq $true -and $SetupExePath -like $null) {
         Start-Sleep -Seconds 3
         break
 }
-Write-Warning "You will have the option to download the Exchange installation files if needed."
+Write-Warning "You will have the option to download the Exchange installation files if they aren't already available."
 Start-Sleep -Seconds 3
 Add-Type -AssemblyName System.Windows.Forms
 ## Ensure the AD PowerShell module is installed
@@ -799,9 +799,9 @@ Add-Content -Path $serverVarFile -Value "'@"
 Write-Host "Removing the Exchange remote PowerShell session..." -ForegroundColor Green
 ## Disconnect from the Exchange remote PowerShell session
 Remove-PSSession -Name ExchangeShell -ErrorAction Ignore
-Write-Host "Disabling IPv6..." -ForegroundColor Green -NoNewline
-New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\ -Name DisabledComponents -Value "0xff" -PropertyType DWORD -ErrorAction SilentlyContinue | Out-Null
-Write-Host "COMPLETE"
+#Write-Host "Disabling IPv6..." -ForegroundColor Green -NoNewline
+#New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\ -Name DisabledComponents -Value "0xff" -PropertyType DWORD -ErrorAction SilentlyContinue | Out-Null
+#Write-Host "COMPLETE"
 ## Get variables from previous user input
 Write-Host "Getting variables for setup..." -ForegroundColor Green -NoNewline
 Import-LocalizedData -BindingVariable ExchangeInstall_LocalizedStrings -FileName $ServerName"-ExchangeInstall-strings.psd1" -BaseDirectory c:\Temp
@@ -876,8 +876,8 @@ Restart-Computer -Force
 # SIG # Begin signature block
 # MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCNlmK2u76Uu5hN
-# SmcepTooOF5Oai1QNUgsiRSydzpKZqCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDbUy2Im6mFB1E5
+# t7cRTRf6cMWdvygkTrClBvaLgFEDuaCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
 # u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
 # cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
 # BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
@@ -898,11 +898,11 @@ Restart-Computer -Force
 # HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
 # NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
 # AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
-# CSqGSIb3DQEJBDEiBCDACIJr5VH2mjERWJLGKtX5FuLGL6xMcJHwZ5ga8pvQeDAN
-# BgkqhkiG9w0BAQEFAASCAQB35GA3KBBo4EJCj5lV/q2IY5h+bSGngKFUmm67axbA
-# jFnCUKCxakgAXxvaa0u2XfMl8crEd5PlIZazSgaDX7o459INka8UZ+muj1jt8lO/
-# Y64vihxQtdVhjWO9Zqwaw6/j8FhETsMuKD+ppc4MbFOYRxW3DVm4W078oTc8Hj4u
-# rhyVIhdP+LLUysWT31lSpdqZQYYMf1mEqc1tRcjwYL7TalgEo5xGpnGHP+OfmY6I
-# 1F/yY6xJPzzS2KAnu2xBIaanfNuydDTlZ2Bru+wOyJtUMMliDmW+7T7sJvxc60ku
-# lQd089A+3PVg7dcj3turFKiJE29P+bBumBBs8v+K2LEM
+# CSqGSIb3DQEJBDEiBCBSfRjZQtNRnvsM+f8ANCuw5mavQrPNty3FO5HzX448ojAN
+# BgkqhkiG9w0BAQEFAASCAQCj9U1pFDQjh5xh4xbSuDe6A2FdRpKxohYUVzN/YH17
+# D2G6BeRAc9DjCllLymKI42PBGKk1h3d8HhY3h0LDGYBc2svJx65bK/40CjjTVLLG
+# nK8TYylsoLd/d5OiPU6I6N38Jh3N89tp9GK4yQPvY+iTf0vpNhqeEI3ejH1sxBx3
+# E/T6GrC0Gl8WU1QJytQTe9TFw2TouhvxWEsK+1KEiEBjegaALeWTc1OvDZyA2x2Q
+# 3a7n0HtPGtFCe/svB+Mhy0sIFJLd4NkxKv/Yr9r3CEf81uVV+r+EJJR7JW4LYbeF
+# iqP2/jLp2yRb6d79unpK4+aaVT4g83kFdh/7Q7/kKBYW
 # SIG # End signature block
