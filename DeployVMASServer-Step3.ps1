@@ -1,9 +1,9 @@
 ﻿<#
 # DeployVMASServer-Step3.ps1
-# Modified 2021/10/01
+# Modified 2021/10/03
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.1
+# Version: v1.2
 
 # Script should automatically start when the virtual machine starts
 # Syntax for running this script:
@@ -156,7 +156,7 @@ Set-ItemProperty -Path $WinLogonKey -Name "DefaultPassword" -Value $ExchangeInst
 Write-Host "COMPLETE"
 ## Verify that the domain can be resolved before continuing
 Write-Host "Verifying the domain can be resolved..." -ForegroundColor Green -NoNewline
-$domain = $ExchangeInstall_LocalizedStrings.res_0014
+$domain = $env:USERDNSDOMAIN
 $serverReady = $false
 while($serverReady -eq $false) {
     $domainController = (Resolve-DnsName $domain -Type SRV -Server $ExchangeInstall_LocalizedStrings.res_0031 -ErrorAction Ignore).PrimaryServer
@@ -165,7 +165,7 @@ while($serverReady -eq $false) {
 }
 Write-Host "COMPLETE"
 ## Get the distinguishedName for the domain
-Write-Host "Import the Active Directory PowerShell module..." -ForegroundColor Green
+Write-Host "Importing the Active Directory PowerShell module..." -ForegroundColor Green
 Import-Module ActiveDirectory
 $adDomain = (Get-ADDomain -ErrorAction Ignore).DistinguishedName
 $exchContainer = "CN=Microsoft Exchange,CN=Services,CN=Configuration,$adDomain"
@@ -243,8 +243,11 @@ if($ExchangeInstall_LocalizedStrings.res_0033 -ne $null) {
 }
 $setupSuccess = $false
 while($setupSuccess -eq $false) {
+    $file = "C:\Temp\exSetup.bat"
     ## Clearing any previous setup log
     Remove-Item -Path c:\ExchangeSetupLogs\ExchangeSetup.log -Force -ErrorAction Ignore | Out-Null
+    ## Reset setup command if failed
+    (Get-Content $file) -replace "/IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF", "/IAcceptExchangeServerLicenseTerms" | Set-Content $file
     ## Install Exchange
     if($ExchangeInstall_LocalizedStrings.res_0036 -ne $null) {
         if(!(Test-Path $ExchangeInstall_LocalizedStrings.res_0035)) {
@@ -252,7 +255,7 @@ while($setupSuccess -eq $false) {
         }
     }
     ## Update the setup command for September 2021 CU releases
-            $file = "C:\Temp\exSetup.bat"
+            
             $setupCommand = (Select-String -Path $file -Pattern setup).Line
             $setupFile = $setupCommand.Substring(0, $setupCommand.IndexOf(" "))
             switch ($ExchangeInstall_LocalizedStrings.res_0003) { ## Checking the version of Exchange being installed
@@ -277,12 +280,12 @@ while($setupSuccess -eq $false) {
 }
 ## Exchange setup completed
 Restart-Computer -Force
-    
+
 # SIG # Begin signature block
 # MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDT4nu+JCRog5ag
-# B+ABaMnk3nUg1MmptXR5s+Z1b9Ka0qCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAz5ti8qsQ5AxTw
+# 5HxYhD+BNmVU5H+kCpdUHYMCetA4I6CCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
 # u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
 # cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
 # BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
@@ -303,11 +306,11 @@ Restart-Computer -Force
 # HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
 # NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
 # AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
-# CSqGSIb3DQEJBDEiBCCIeuQ5XzgMvpRpQzbw9Hh7hHzj+QuLCFzs8Vx22bNkFzAN
-# BgkqhkiG9w0BAQEFAASCAQB3+lZuHlgg4DEikGodalHpMRiJqNOSpgqn/71a4O9N
-# nuroJZ9t7g8gTGJBXrAt3QN+5h7pgGJBz+z/5ewm7zEfChj7O6b4E/rNr+j9n4Eu
-# +E0Af2cKRQWM6BBaEr3X+xcIOBqrt3vZpDa24yU6g4MU/ZTtKYeDCvRPg9Aj5jaR
-# 8lhGELoHDxJ9xfFaXpAf52tTlCPR7wy4vdc4uRl7MooFwr4AStOgl8YDgKXicF0W
-# p2OZfg7eImLKcA4F5EI9bNob+TTnwug24jmM8p1HA6dfUdgZyCpdLMkA7crSSX8S
-# nUrf+ub7cMBJ7oWzWbnXT/KoolyVFFkbvSXjR2FOOFHf
+# CSqGSIb3DQEJBDEiBCCNaoGHipBP8LiJuFlwM+S1220lulP0q0LvuBQPElvtNDAN
+# BgkqhkiG9w0BAQEFAASCAQAnQS9appFIZN01QuDQKdi5kz38MPmD2fcQq8oJfMCp
+# lLvLZoQ0hy9oXuuYQiBJLgn65f5GplduTTLPoIvXkGg5ZFpi5Znchd1gXhd7LS80
+# xqjmJQVk7/ncphgRUV1E8jukqm42cwZsHdJluYyvbwm8gW5MX9DRb6UlGtTOVDfW
+# APBuSt5XCjqWlz7PvjLjGe4MqmqN7ReaStpm3lWMqhGxx0bNzJa/YOg2wqrMrZOp
+# Wa2+rUFmGTttl9Wb8qinzUORAD/0gZTt9UkwrdDVU9BOv8UKGEevCI6BQY6FirOD
+# 34UkDOoq5WMpQ7G0qjXROxlHQdYh1wr8AVudeYkX7ZuN
 # SIG # End signature block
