@@ -1,9 +1,9 @@
 ﻿<#
 # DeployVMASServer-Step2.ps1
-# Modified 2021/10/01
+# Modified 2021/10/03
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.1
+# Version: v1.2
 
 # Script should automatically start when the virtual machine starts
 # Syntax for running this script:
@@ -131,7 +131,7 @@ if($vs2012Install -eq $false) {
 }
 else {
     ## Download and install Visual C++ Redistributable Package for Visual Studio 2012
-    Write-Host "MISSING"
+    Write-Host "MISSING" -ForegroundColor Red
     Write-Host "Downloading Visual C++ Redistributable Package for Visual Studio 2012..." -ForegroundColor Green -NoNewline
     $Url = "https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe"
     $Path = "C:\Temp\vcredist_x64-2012.exe"
@@ -153,7 +153,7 @@ if($vs2013Install -eq $false) {
 }
 else {
     ## Download and install Visual C++ Redistributable Package for Visual Studio 2013
-    Write-Host "MISSING"
+    Write-Host "MISSING" -ForegroundColor Red
     Write-Host "Downloading Visual C++ Redistributable Package for Visual Studio 2013..." -ForegroundColor Green -NoNewline
     $Url = "https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe"
     $Path = "C:\Temp\vcredist_x64-2013.exe"
@@ -174,6 +174,7 @@ else {
             Write-Host "FOUND"
         }
         else {
+            Write-Host "MISSING" -ForegroundColor Red
             Write-Host "Downloading URL Rewrite..." -ForegroundColor Green -NoNewline
             $Url = "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi"
             $Path = "C:\Temp\rewrite_amd64_en-US.msi"
@@ -186,7 +187,7 @@ else {
             [int]$InstallCheck = 0
             while($InstallComplete -eq $false) {
                 Start-Sleep -Seconds 30
-                if((Get-Content C:\Temp\rewrite.log) -contains "Installation completed successfully" -or $InstallCheck -eq 5) {
+                if((Get-Content C:\Temp\rewrite.log) -match "completed successfully" -or $InstallCheck -eq 5) {
                     $InstallComplete = $true
                 }
                 else {
@@ -202,7 +203,7 @@ if($ucmaInstall -eq $false) {
 }
 else {
     ## Download and install Unified Communications Managed API 4.0
-    Write-Host "MISSING"
+    Write-Host "MISSING" -ForegroundColor Red
     if($ExchangeInstall_LocalizedStrings.res_0037 -ne 1) {
         Write-Host "Downloading Unified Communications Managed API 4.0..." -ForegroundColor Green -NoNewline
         $Url = "https://download.microsoft.com/download/2/C/4/2C47A5C1-A1F3-4843-B9FE-84C0032C61EC/UcmaRuntimeSetup.exe"
@@ -243,8 +244,8 @@ Restart-Computer -Force
 # SIG # Begin signature block
 # MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBB/ATjlWbXATHD
-# 2BBt+j1BqB+1JjS6p7FjCxDZBLMlm6CCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAzNszhnnJTx0+K
+# bhvWSsvEm3ctYDRqAvE2Fqsqhc/+UqCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
 # u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
 # cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
 # BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
@@ -265,11 +266,11 @@ Restart-Computer -Force
 # HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
 # NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
 # AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
-# CSqGSIb3DQEJBDEiBCD1cQEuv+hjZxTplnPmjP/cxxnM75bUL2Eg1KeXLJcl0jAN
-# BgkqhkiG9w0BAQEFAASCAQBw6/lJtGWFgcf5IVItYfAg1U7z0pHr/W1qL0Bvsgp0
-# 6zGDbttamF0qyBw+bHrf4xDO+RIa+q52rWu/R3kQrADfmz0tzxyQK2f+JD/NgkGc
-# uX//1lAMnAfU3XetUwRhwSb1AtPnjgST/ink/ZtSHFFQFGW1GUaRfUYd3UxKHFa4
-# Gj6JT+MKrvxfl7yYdAcZwxjqcZDrWSS0dgB2BRjeEZZivgAe5IGMUEzRIY43ToND
-# CZOhmJ9PrG6Wny50VqSi8X7cUS9T85zTpnD2zpfMrbKM3Qt50MFyRoP3AID9jpl0
-# DHzPZQq45ebGlB0rk0TkKikS09vnpMGdk6NySD3v68La
+# CSqGSIb3DQEJBDEiBCAFZSu/6zdLDOdwxJ3n8UmGr1l1ZkN2Cl63GJhS5Yt5WzAN
+# BgkqhkiG9w0BAQEFAASCAQCnprRegb1J4tQe6Sn0R94tXoKiQwH4TqNXjAAiodVx
+# cvHRP8ca3L5ZFkllqTtBvDislacS3/WCNqAxAe2FdlIhGZfbjhI5d8gFcGlNsTf3
+# W6MImev0BudjAHkyxOdoM2NWkM9JqUbs+yEwhmmcwazbHfKNFocaz7C51ZHKKN5Z
+# R5C6NWA83fE2vLbI6uuYOc6SNGx9T7Iy/zaqqJlISjk5kdY4JMBwFus3Iue/fcQH
+# VleVaRqTbhvA8Tw19fDV1FUPBGZtOup2GGyBArTDrIBFeJvIBa2WQ01n8zHxDbxI
+# yijFsIgr7FF2ufqqNNiqG2WPoIApDk8Xhd75hRHxvaCt
 # SIG # End signature block
