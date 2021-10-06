@@ -306,11 +306,8 @@ function Test-IP() {
 }
 function Get-ExchangeExe {
     ## Add something to get the Exchange install path
-    $fileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{InitialDirectory="C:\"; Title="Select the Exchange setup executable"}
-    $fileBrowser.Filter = "EXE (*.exe)| *.exe"
-    $fileBrowser.ShowDialog()
-    [string]$exchSetupExe = $fileBrowser.FileName
-    $exchSetupExe = $exchSetupExe.Replace("\","\\")
+    [string]$exchSetupExe = (Get-Volume | where {$_.FileSystemLabel -like "EXCHANGESERVER*"}).DriveLetter
+    $exchSetupExe = "$($exchSetupExe):\\setup.exe"
     Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $exchSetupExe)
 }
 function Validate-DagName {
@@ -873,11 +870,12 @@ switch ($ExchangeInstall_LocalizedStrings.res_0003) { ## Checking the version of
 }
 Write-Host "COMPLETE"
 Restart-Computer -Force
+
 # SIG # Begin signature block
 # MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDbUy2Im6mFB1E5
-# t7cRTRf6cMWdvygkTrClBvaLgFEDuaCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBkiIot3immbbQi
+# deCSrA7+aoeiL5i2thZMXITTb1Di7aCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
 # u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
 # cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
 # BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
@@ -898,11 +896,11 @@ Restart-Computer -Force
 # HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
 # NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
 # AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
-# CSqGSIb3DQEJBDEiBCBSfRjZQtNRnvsM+f8ANCuw5mavQrPNty3FO5HzX448ojAN
-# BgkqhkiG9w0BAQEFAASCAQCj9U1pFDQjh5xh4xbSuDe6A2FdRpKxohYUVzN/YH17
-# D2G6BeRAc9DjCllLymKI42PBGKk1h3d8HhY3h0LDGYBc2svJx65bK/40CjjTVLLG
-# nK8TYylsoLd/d5OiPU6I6N38Jh3N89tp9GK4yQPvY+iTf0vpNhqeEI3ejH1sxBx3
-# E/T6GrC0Gl8WU1QJytQTe9TFw2TouhvxWEsK+1KEiEBjegaALeWTc1OvDZyA2x2Q
-# 3a7n0HtPGtFCe/svB+Mhy0sIFJLd4NkxKv/Yr9r3CEf81uVV+r+EJJR7JW4LYbeF
-# iqP2/jLp2yRb6d79unpK4+aaVT4g83kFdh/7Q7/kKBYW
+# CSqGSIb3DQEJBDEiBCCVAQTSNsYS4/E5vtYQBFRxHR5S3qDPZOqYU51pdv03CzAN
+# BgkqhkiG9w0BAQEFAASCAQAAf2yYL8x2VlZlS8pIzCVBwVe/x899Wm4Jb5hviJnY
+# Y5zHtsS+4kOBVaL9fp7KVVPQ5u/MS2Ni/j6ZPtmwL3lyIp9RZCyVQQ9XL/ZfhGye
+# RgCqVqo9RYF/xigt45Apufk3hXRIWo7eCiGRbZCwQlLVY4NSXBu3jjedARKjRAr6
+# bvFqS9COG4rMXLWzWbU458c28jJSKDqtaKv3i0vZRj/QFMJGLK8oSrT/SbPE0WKv
+# 3wNtB5IVvowTguaVYhLc7akdhCuRnHUiLYdaBskAOqBDDoA3pJvkYsliaDisknMz
+# XeU474r/u8zXpNpIazyqTmfL8+Gm9iTA8MGOcS6/tX8Z
 # SIG # End signature block
