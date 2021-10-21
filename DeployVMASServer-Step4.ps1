@@ -1,9 +1,9 @@
 ﻿<#
 # DeployVMASServer-Step4.ps1
-# Modified 2021/10/03
+# Modified 2021/10/21
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.2
+# Version: v1.2.1
 
 # Script should automatically start when the virtual machine starts
 # Syntax for running this script:
@@ -27,13 +27,13 @@
 #>
 ## Functions for Exchange configuration
 function Install-Exch2013SU {
-    ## Download and install July 2021 Security Update for Exchange 2013 CU23
+    ## Download and install October 2021 Security Update for Exchange 2013 CU23
     Write-Host "Downloading Security Update for Exchange 2013 CU23..." -ForegroundColor Green 
-    Invoke-WebRequest -Uri "https://download.microsoft.com/download/2/e/0/2e0bcd42-e604-4bc0-afce-460e05189a2e/Exchange2013-KB5004778-x64-en.msp" -OutFile "C:\Temp\Exchange2013-KB5004778-x64-en.msp" 
-    Write-Host "Installing Security Update for Exchange 2013 CU23..." -ForegroundColor Green 
-    Start-Process -FilePath powershell -Verb Runas -ArgumentList "C:\Temp\Exchange2013-KB5004778-x64-en.msp /passive /norestart"
+    Invoke-WebRequest -Uri "https://download.microsoft.com/download/3/c/5/3c58339e-0cd2-4f6d-a7e7-0bd6793c145c/Exchange2013-KB5007011-x64-en.msp" -OutFile "C:\Temp\Exchange2013-KB5007011-x64-en.msp" 
+    Write-Host "Installing October 2021 Security Update for Exchange 2013 CU23..." -ForegroundColor Green 
+    Start-Process -FilePath powershell -Verb Runas -ArgumentList "C:\Temp\Exchange2013-KB5007011-x64-en.msp /passive /norestart"
     Start-Sleep -Seconds 10
-    while(Get-Process msiexec | where {$_.MainWindowTitle -eq "Security Update for Exchange Server 2013 Cumulative Update 23 (KB5004778)"} -ErrorAction SilentlyContinue) {
+    while(Get-Process msiexec | where {$_.MainWindowTitle -eq "Security Update for Exchange Server 2013 Cumulative Update 23 (KB5007011)"} -ErrorAction SilentlyContinue) {
         Write-Host "..." -ForegroundColor Green -NoNewline
         Start-Sleep -Seconds 10
     }
@@ -430,8 +430,8 @@ Restart-Computer
 # SIG # Begin signature block
 # MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDVBO/Ab3QV3TSG
-# F8Rt00vtQ+CWMHsCGxbj/EXL9Qn+L6CCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCALhfkAYmcNA24h
+# qjtPMq3MAeBLtMJAmswS8Wkr4VY+fqCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
 # u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
 # cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
 # BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
@@ -452,11 +452,11 @@ Restart-Computer
 # HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
 # NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
 # AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
-# CSqGSIb3DQEJBDEiBCBogaep5yMzkdm+D4Ajyn93HQW0IaPmJQVYAtHfBoYwPTAN
-# BgkqhkiG9w0BAQEFAASCAQAl5FlREHLy+bq/UMPKaewx+q1p8OlaN+z1HMUfd52V
-# xuB7AlH+tmftEn1cEosWelA4bI0OhK5YfqG0y3OSrmcPoqGvWltTi4X04YvkdnvW
-# vwCgHPdihqJgjjMKril3deI3gxUUr79xzUW4KtL0J8QHscRMhuRa4TF65ng/8w/U
-# HBXD3BQ56cg6pPmE1tkzecF1plY/QrNtW2X2HvQ9cm3zsItbCWxyVBymCBQ6qJ55
-# sCkdHOqiXucXsBJhQ2wjPQ8YByH5Q+96SkZeKFNOqonznl4e5B8q0J/jt5V62/8Y
-# bwUhgMTfHXD+DcDj2UiAcBPlb1E+U7K9elFzFlJbWTCp
+# CSqGSIb3DQEJBDEiBCCJxO7QAJkccuDwsAUlgwGzZevQ9lfNBT3C1lkWbdD9ZTAN
+# BgkqhkiG9w0BAQEFAASCAQBfsBT26XAUjeJpWghOM3NhE216Knf+xaC3rWRhjc2U
+# /0CvgEK+v6D4HgHFmWJfrpLPPoM8caWH/AwoTXrs5tYc67lk7SAHUw/c6rSG19xp
+# j5miR0TYmmbesit5ZuNxaCxeFN/YCGj2SSjim5nPUa5MYzwQM+Z99d7FzBF4iDlm
+# WO4T1+tokw1RyjWdp9ErEr12rWkqwcpQZFuZfgrD29AQriZ/XK6cgEu9Zg03jBzM
+# FXuaUydvYA3gkQEgbsm9idAQxxT1rjhLci9NsQucMaPhHYhtPZI7jDmnBUvVl1eA
+# s6jH6Nj5fbycxy6C+OZVJ+w9dR1cXSa+CdPSuGtH9Zdv
 # SIG # End signature block
