@@ -835,13 +835,29 @@ New-Item $installBat -ItemType File -ErrorAction SilentlyContinue | Out-Null
 switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking whether is install is new or recover
     0 { switch ($exResult) { ## Checking the version of Exchange to install
             2 { switch ($ExchangeInstall_LocalizedStrings.res_0005) { ## Checking the roles to install for 2019
-                    0 { $exSetupLine = ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms') }
-                    1 { $exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms') }
+                    0 { if((Get-Item $setupFile -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.02.0986.005") {
+                            $exSetupLine = ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF')
+                        }
+                        else {$exSetupLine = ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms')} 
+                    }
+                    1 { if((Get-Item $setupFile -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.02.0986.005") {
+                            $exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF')
+                        }
+                        else {$exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms') }
+                    }
                 }
             }
             1 { switch ($ExchangeInstall_LocalizedStrings.res_0005) { ## Checking the roles to install for 2016
-                    0 { $exSetupLine =  ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms') }
-                    1 { $exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms') }
+                    0 { if((Get-Item $setupFile -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.01.2375.007") {
+                            $exSetupLine =  ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF') 
+                        }
+                        else {$exSetupLine =  ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms')}
+                    }
+                    1 { if((Get-Item $setupFile -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.01.2375.007") {
+                            $exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF')
+                        }
+                        else{$exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms')} 
+                    }
                 }
             }
             0 { switch ($ExchangeInstall_LocalizedStrings.res_0005) { ## Checking the roles to install for 2013
@@ -874,8 +890,8 @@ Restart-Computer -Force
 # SIG # Begin signature block
 # MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBkiIot3immbbQi
-# deCSrA7+aoeiL5i2thZMXITTb1Di7aCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD4ow33n3nF41c5
+# LU2OnW5efxCeqQmW+VhZuJF1+4RkPKCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
 # u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
 # cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
 # BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
@@ -896,11 +912,11 @@ Restart-Computer -Force
 # HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
 # NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
 # AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
-# CSqGSIb3DQEJBDEiBCCVAQTSNsYS4/E5vtYQBFRxHR5S3qDPZOqYU51pdv03CzAN
-# BgkqhkiG9w0BAQEFAASCAQAAf2yYL8x2VlZlS8pIzCVBwVe/x899Wm4Jb5hviJnY
-# Y5zHtsS+4kOBVaL9fp7KVVPQ5u/MS2Ni/j6ZPtmwL3lyIp9RZCyVQQ9XL/ZfhGye
-# RgCqVqo9RYF/xigt45Apufk3hXRIWo7eCiGRbZCwQlLVY4NSXBu3jjedARKjRAr6
-# bvFqS9COG4rMXLWzWbU458c28jJSKDqtaKv3i0vZRj/QFMJGLK8oSrT/SbPE0WKv
-# 3wNtB5IVvowTguaVYhLc7akdhCuRnHUiLYdaBskAOqBDDoA3pJvkYsliaDisknMz
-# XeU474r/u8zXpNpIazyqTmfL8+Gm9iTA8MGOcS6/tX8Z
+# CSqGSIb3DQEJBDEiBCBhynXS9rZbqQgEufkcAwQp3Fg3tQF3RL1j8WOaBA53lTAN
+# BgkqhkiG9w0BAQEFAASCAQBDaINULRQOen/auWyfBA5nVFetGIHjN5iz45wfJr/f
+# nXGViZqBMOey40ko45fWzAKoeEG4Q8e30HkXuKzuUDQ1XYVksIcK8KmBFVQtfg+G
+# bE3CrdnbYrGPeHA/BVkmS+c2JfZqjgiEarPbmOn8p1ODigmVrPnjjfNuwT/gqQK5
+# VxDFpVqehmBwca83sRdMn0zicMjcqsbJKKdl14t2ekRYrYfiePtjCvGp/AJz+jou
+# ZZcQzak/0hSb+ihlk0jy7cl0FqImB+ZdsdR6qEtsTpfzuBqoBkk2e3MGh1WT6DWj
+# AHjkPVHyjK7JlPw+lh85rmkKax9VVlIVCi7ep8z5xW+8
 # SIG # End signature block
