@@ -1,6 +1,6 @@
 ﻿<#
 # DeployVMASServer-Step4.ps1
-# Modified 2021/10/21
+# Modified 13 January 2022
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
 # Version: v1.2.1
@@ -56,7 +56,7 @@ function Install-Exch2016SU{
         Write-Host "Downloading Security Update for Exchange 2016 CU22..." -ForegroundColor Green
         Invoke-WebRequest -Uri "https://download.microsoft.com/download/8/0/9/80947b03-7fd2-44fe-877f-7870f9bedfb8/Exchange2016-KB5008631-x64-en.msp" -OutFile "C:\Temp\Exchange2016-KB5008631-x64-en.msp" 
     }
-    if(Get-Item C:\Temp\Exchange2016-KB5007409-x64-en.msp -ErrorAction Ignore) {
+    if(Get-Item C:\Temp\Exchange2016-KB5008631-x64-en.msp -ErrorAction Ignore) {
         Write-Host "Installing January 2022 Security Update for Exchange 2016..." -ForegroundColor Green -NoNewline
         Start-Process -FilePath powershell -Verb Runas -ArgumentList "C:\Temp\Exchange2016-KB5008631-x64-en.msp /passive /norestart"
         Start-Sleep -Seconds 10
@@ -77,7 +77,7 @@ function Install-Exch2019SU{
         Write-Host "Downloading Security Update for Exchange 2019 CU11..." -ForegroundColor Green 
         Invoke-WebRequest -Uri "https://download.microsoft.com/download/e/6/4/e643edcb-923f-4a47-8948-5e088196fcd6/Exchange2019-KB5008631-x64-en.msp" -OutFile "C:\Temp\Exchange2019-KB5008631-x64-en.msp" 
     }
-    if(Get-Item C:\Temp\Exchange2019-KB5007409-x64-en.msp -ErrorAction Ignore) {
+    if(Get-Item C:\Temp\Exchange2019-KB5008631-x64-en.msp -ErrorAction Ignore) {
         Write-Host "Installing January 2022 Security Update for Exchange 2019..." -ForegroundColor Green -NoNewline
         Start-Process -FilePath powershell -Verb Runas -ArgumentList "C:\Temp\Exchange2019-KB5008631-x64-en.msp /passive /norestart"
         Start-Sleep -Seconds 10
@@ -477,10 +477,10 @@ Install-ExchSU
 Restart-Computer
 
 # SIG # Begin signature block
-# MIIDZgYJKoZIhvcNAQcCoIIDVzCCA1MCAQExDzANBglghkgBZQMEAgEFADB5Bgor
+# MIIDZwYJKoZIhvcNAQcCoIIDWDCCA1QCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCbRnK/0aIyNOQX
-# fPyr33UCvLANSTZTjbGID3EHmYqdSqCCAZQwggGQMIIBFaADAgECAggmFxDWcEY7
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDBKYDjn9pwRs2y
+# 4JGfWlIZ8IyQZCU/POIJFznvyiECNaCCAZQwggGQMIIBFaADAgECAggmFxDWcEY7
 # FTAKBggqhkjOPQQDAzAvMS0wKwYDVQQDEyQ3ZDMxYjI0NC05N2Y5LTQxZDAtYjQ5
 # OS1mYzI0NjMxYmE1YTIwHhcNMjIwMTA0MDE1NjM2WhcNMjMwMTA0MTM1NjM2WjAv
 # MS0wKwYDVQQDEyQ3ZDMxYjI0NC05N2Y5LTQxZDAtYjQ5OS1mYzI0NjMxYmE1YTIw
@@ -489,11 +489,11 @@ Restart-Computer
 # P8jCulJgDFNospS9R5aX2h4y5WEn4XUwCgYIKoZIzj0EAwMDaQAwZgIxAJE52jMb
 # c2lnsNMc5DrmsWk9mcWp2nR61oCAY+kBFkVXG229SrsU2QDG/4aCV3i74gIxAJ2p
 # Ym1jSnD1MLCS6W4mpeHGgXoXbXOJ9jqRbWqc3g5ZdDxUXiUo66sVuT2YElKsgDGC
-# ASgwggEkAgEBMDswLzEtMCsGA1UEAxMkN2QzMWIyNDQtOTdmOS00MWQwLWI0OTkt
+# ASkwggElAgEBMDswLzEtMCsGA1UEAxMkN2QzMWIyNDQtOTdmOS00MWQwLWI0OTkt
 # ZmMyNDYzMWJhNWEyAggmFxDWcEY7FTANBglghkgBZQMEAgEFAKBeMBAGCisGAQQB
 # gjcCAQwxAjAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMC8GCSqGSIb3DQEJ
-# BDEiBCCU67YiLuyWbdA93ySE7RXIXnbizsvjFAWV9l+4OwfaljALBgcqhkjOPQIB
-# BQAEZjBkAjAon3DNCPUUmu4TKkmHJ+r9RlHFvrjiFeF2y23y+C4jU+rxjGs/KEsy
-# 0KyOE9T01LsCMFQEZqzX84XR0L4rE3l/W+AVM4C/rdCvsha1xprVd3LQFZJXZbGH
-# BfEAhTIX6PstkQ==
+# BDEiBCAMVmeAtoLi5I46uYpBeR0FAucwULYdbRXTChFgHMreRjALBgcqhkjOPQIB
+# BQAEZzBlAjEAxXJRYom4RXgeCww3oTfCseHZZIy83VglC85X7qx4AeOqmFA282rH
+# SnIkCayCJNKOAjBJel9PSNhnGP2EiK7PcgvbphxvfG1kqfckp0XQZfUkOf1+uZIK
+# irQ7uGLg8a/lJoM=
 # SIG # End signature block
