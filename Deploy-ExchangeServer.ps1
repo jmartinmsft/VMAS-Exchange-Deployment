@@ -59,9 +59,9 @@ function Prompt-ExchangeDownload {
     if($downloadResult -eq 0) {
         switch($exVersion) {
             2{  
-                Write-Host "Downloading Exchange 2019 CU11..." -ForegroundColor Green -NoNewline
-                $Url = "https://download.microsoft.com/download/5/3/e/53e75dbd-ca33-496a-bd23-1d861feaa02a/ExchangeServer2019-x64-CU11.ISO"
-                $Path = "C:\Temp\Exchange2019_CU11.iso"
+                Write-Host "Downloading Exchange 2019 CU12..." -ForegroundColor Green -NoNewline
+                $Url = "https://download.microsoft.com/download/b/c/7/bc766694-8398-4258-8e1e-ce4ddb9b3f7d/ExchangeServer2019-x64-CU12.ISO"
+                $Path = "C:\Temp\Exchange2019_CU12.iso"
                 $webClient = New-Object System.Net.WebClient
                 $webClient.DownloadFile($url, $Path)
                 Write-Host "COMPLETE"
@@ -70,9 +70,9 @@ function Prompt-ExchangeDownload {
                 Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $path)
                 }
             1{
-                Write-Host "Downloading Exchange 2016 CU22..." -ForegroundColor Green -NoNewline
-                $Url = "https://download.microsoft.com/download/f/0/e/f0e65686-3761-4c9d-b8b2-9fb71a207b8d/ExchangeServer2016-x64-CU22.ISO"
-                $Path = "C:\Temp\Exchange2016_CU22.iso"
+                Write-Host "Downloading Exchange 2016 CU23..." -ForegroundColor Green -NoNewline
+                $Url = "https://download.microsoft.com/download/8/d/2/8d2d01b4-5bbb-4726-87da-0e331bc2b76f/ExchangeServer2016-x64-CU23.ISO"
+                $Path = "C:\Temp\Exchange2016_CU23.iso"
                 $webClient = New-Object System.Net.WebClient
                 $webClient.DownloadFile($url, $Path)
                 Write-Host "COMPLETE"
