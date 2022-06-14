@@ -1,9 +1,9 @@
 ﻿<#
 # Deploy-ExchangeServer.ps1
-# Modified 13 June 2022
+# Modified 14 June 2022
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.3
+# Version: v1.4
 # Syntax for running this script:
 #
 # .\Deploy-ExchangeServer.ps1
@@ -476,7 +476,7 @@ if($exchContainer -notlike $null) {
             }
         }
     }
-    else { Write-Host "No Exchange organization found." -ForegroundColor Green}
+    else { Write-Host "No Exchange organization found." -ForegroundColor Green  }
     $exchServer = $exchServer.Name
 }
 Add-Content -Path $serverVarFile -Value ('res_0004 = ' + $exInstallType)
@@ -510,7 +510,7 @@ switch ($exInstallType) {
             ## New forest - set current version less than 2013
             else { $currentVersion = -1 }
             ## Check to see if a version of Exchange is being skipped
-            if(((($exVersion -ne $currentVersion -and $exVersion-$currentVersion) -gt 1)) -or ($noExchange -eq $true -and $exVersion -gt 0)) {
+            if(((($exVersion -ne $currentVersion -and $exVersion-$currentVersion) -gt 1)) -or ($exchOrgPresent -eq $false -and $exVersion -gt 0)) {
                 Write-Warning "One or more versions of Exchange is not installed"
                 $yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Yes'
                 $no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'No'
@@ -561,7 +561,7 @@ switch ($exInstallType) {
             }
         }
         ## Check if the certificate from the remote PowerShell session Exchange server should be used
-        if($noExchange -eq $false) {
+        if($exchOrgPresent) {
             if(Get-CertificateFromServerCheck) {
                 ## Need to fix the next line
                 if($exchServer -like "*.*") { $certServer = $exchServer.Substring(0, $exchServer.IndexOf(".")) }
@@ -784,11 +784,13 @@ if($thumb.Length -gt 1) {
     Write-Host "Exporting current Exchange certificate with thumbprint $thumb from $certServer..." -ForegroundColor Green -NoNewline
     ## Need to check for c:\Temp
     New-Item -ItemType Directory -Path "\\$exchServer\c$\Temp" -ErrorAction Ignore | Out-Null
-    Export-ExchangeCertificate -Server $certServer -Thumbprint $thumb -FileName "C:\Temp\$ServerName-Exchange.pfx" -BinaryEncoded -Password (ConvertTo-SecureString -String 'Pass@word1' -AsPlainText -Force) | Out-Null
-    $certServerDrive = "\\$exchServer\c$\temp"
-    New-PSDrive -Name "Script" -PSProvider FileSystem -Root $certServerDrive -Credential $credential
-    Copy-Item -Path "Script:\$ServerName-Exchange.pfx" -Destination C:\Temp
-    Remove-PSDrive -Name "Script"
+    #Export-ExchangeCertificate -Server $certServer -Thumbprint $thumb -FileName "C:\Temp\$ServerName-Exchange.pfx" -BinaryEncoded -Password (ConvertTo-SecureString -String 'Pass@word1' -AsPlainText -Force) | Out-Null
+    $cert = Export-ExchangeCertificate -Server $exchServer -Thumbprint $thumb -BinaryEncoded -Password (ConvertTo-SecureString -String 'Pass@word1' -AsPlainText -Force)
+    Set-Content -Path "c:\Temp\$ServerName-Exchange.pfx" -Value $cert.FileData -Encoding Byte
+    #$certServerDrive = "\\$exchServer\c$\temp"
+    #New-PSDrive -Name "Script" -PSProvider FileSystem -Root $certServerDrive -Credential $credential
+    #Copy-Item -Path "Script:\$exchServer-Exchange.pfx" -Destination C:\Temp
+    #Remove-PSDrive -Name "Script"
     Write-Host "COMPLETE"
 }
 ## Finalize the psd1 file

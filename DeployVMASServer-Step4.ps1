@@ -335,7 +335,8 @@ $DagName = $ExchangeInstall_LocalizedStrings.res_0001
 if($ExchangeInstall_LocalizedStrings.res_0002 -ne $null) {        
     Write-Host "Importing Exchange certificate and assigning services..." -ForegroundColor Green
     $transportCert = (Get-TransportService $ServerName).InternalTransportCertificateThumbprint
-    Import-ExchangeCertificate -Server $ServerName -FileName "C:\Temp\$ServerName-Exchange.pfx" -Password (ConvertTo-SecureString -String "Pass@word1" -AsPlainText -Force) -PrivateKeyExportable:$True | Out-Null
+    #Import-ExchangeCertificate -Server $ServerName -FileName "C:\Temp\$ServerName-Exchange.pfx" -Password (ConvertTo-SecureString -String "Pass@word1" -AsPlainText -Force) -PrivateKeyExportable:$True | Out-Null
+    Import-ExchangeCertificate -Server $ServerName -FileData ([Byte[]]$(Get-Content -Path "C:\Temp\$ServerName-Exchange.pfx" -Encoding byte)) -Password (ConvertTo-SecureString -String 'Pass@word1' -AsPlainText -Force) -PrivateKeyExportable:$True
     Enable-ExchangeCertificate -Thumbprint $ExchangeInstall_LocalizedStrings.res_0002 -Services IIS,SMTP -Server $ServerName -Force
     ## Reset the transport service certificate back to the original self-signed certificate
     Enable-ExchangeCertificate -Thumbprint $transportCert -Services SMTP -Server $ServerName -Force
