@@ -1,9 +1,9 @@
 ﻿<#
 # Deploy-ExchangeServer.ps1
-# Modified 2021/10/03
+# Modified 13 June 2022
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.2
+# Version: v1.3
 # Syntax for running this script:
 #
 # .\Deploy-ExchangeServer.ps1
@@ -309,6 +309,7 @@ function Get-ExchangeExe {
     [string]$exchSetupExe = (Get-Volume | where {$_.FileSystemLabel -like "EXCHANGESERVER*"}).DriveLetter
     $exchSetupExe = "$($exchSetupExe):\\setup.exe"
     Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $exchSetupExe)
+    return $exchSetupExe
 }
 function Validate-DagName {
     ## Verify the DAG name provided is present
@@ -390,6 +391,7 @@ function Check-NewDeployment {
 function Create-ServerVariableFile {
     ## Create psd1 with variables for the VM to use for setup
     $serverVarFileName = "c:\Temp\$ServerName-ExchangeInstall-strings.psd1"
+    if(Get-Item $serverVarFileName -ErrorAction Ignore) {Remove-Item $serverVarFileName -Confirm:$false -ErrorAction Ignore -Force}
     New-Item -Name "Temp" -ItemType Directory -Path "c:\" -ErrorAction SilentlyContinue | Out-Null
     New-Item $serverVarFileName -ItemType File -ErrorAction SilentlyContinue | Out-Null
     Add-Content -Path $serverVarFileName -Value "ConvertFrom-StringData @'"
@@ -453,9 +455,9 @@ $exInstallType = 0
 $adDomain = (Get-ADDomain -ErrorAction Ignore).DistinguishedName
 Write-Host "Checking for an Exchange organization..." -ForegroundColor Green
 $servicesContainer = "CN=Services,CN=Configuration,$adDomain"
-$exchContainer = Get-ADObject -LDAPFilter "(objectClass=msExchConfigurationContainer)" -SearchBase $servicesContainer -SearchScope OneLevel -ErrorAction Ignore
-if($exchContainer.DistinguishedName.Length -gt 0) {
-    $exchServersContainer = Get-ADObject -LDAPFilter "(objectClass=msExchServersContainer)" -SearchBase $exchContainer -SearchScope Subtree -ErrorAction Ignore
+$exchContainer = (Get-ADObject -LDAPFilter "(objectClass=msExchConfigurationContainer)" -SearchBase $servicesContainer -SearchScope OneLevel -ErrorAction Ignore).DistinguishedName
+if($exchContainer -notlike $null) {
+    $exchServersContainer = Get-ADObject -LDAPFilter "(objectClass=msExchServersContainer)" -SearchBase $exchContainer -SearchScope Subtree -ErrorAction Ignore | Where {$_.DistinguishedName -like "*FYDIBOHF23*"}
     if($exchServersContainer.DistinguishedName.Length -gt 0) {
         Write-Host "Checking for existing Exchange servers..." -ForegroundColor Green
         $exchServers = Get-ADObject -LDAPFilter "(objectClass=msExchExchangeServer)" -SearchBase $exchServersContainer -SearchScope OneLevel -Properties msExchCurrentServerRoles
@@ -524,7 +526,7 @@ switch ($exInstallType) {
         if($SetupExePath -like $null) { 
             Write-Warning "You must download the ISO before running this script."
             Prompt-ExchangeDownload
-            Get-ExchangeExe
+            $SetupExePath = Get-ExchangeExe
         }
         else{
             $SetupExePath = $SetupExePath.Replace("\","\\")
@@ -831,16 +833,17 @@ $exResult = $ExchangeInstall_LocalizedStrings.res_0003
 ## Create batch file for the Exchange install
 Write-Host "Creating the Exchange setup script..." -ForegroundColor Green -NoNewline
 $installBat = "c:\Temp\exSetup.bat"
+if(Get-Item $installBat -ErrorAction Ignore) {Remove-Item $installBat -ErrorAction Ignore -Force}
 New-Item $installBat -ItemType File -ErrorAction SilentlyContinue | Out-Null
 switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking whether is install is new or recover
     0 { switch ($exResult) { ## Checking the version of Exchange to install
             2 { switch ($ExchangeInstall_LocalizedStrings.res_0005) { ## Checking the roles to install for 2019
-                    0 { if((Get-Item $setupFile -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.02.0986.005") {
+                    0 { if((Get-Item $SetupExePath -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.02.0986.005") {
                             $exSetupLine = ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF')
                         }
                         else {$exSetupLine = ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms')} 
                     }
-                    1 { if((Get-Item $setupFile -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.02.0986.005") {
+                    1 { if((Get-Item $SetupExePath -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.02.0986.005") {
                             $exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF')
                         }
                         else {$exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms') }
@@ -848,12 +851,12 @@ switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking whether is ins
                 }
             }
             1 { switch ($ExchangeInstall_LocalizedStrings.res_0005) { ## Checking the roles to install for 2016
-                    0 { if((Get-Item $setupFile -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.01.2375.007") {
+                    0 { if((Get-Item $SetupExePath -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.01.2375.007") {
                             $exSetupLine =  ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF') 
                         }
                         else {$exSetupLine =  ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms')}
                     }
-                    1 { if((Get-Item $setupFile -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.01.2375.007") {
+                    1 { if((Get-Item $SetupExePath -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.01.2375.007") {
                             $exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF')
                         }
                         else{$exSetupLine =  ($exInstallPath + ' /mode:install /roles:et /IAcceptExchangeServerLicenseTerms')} 
@@ -886,37 +889,3 @@ switch ($ExchangeInstall_LocalizedStrings.res_0003) { ## Checking the version of
 }
 Write-Host "COMPLETE"
 Restart-Computer -Force
-
-# SIG # Begin signature block
-# MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
-# BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD4ow33n3nF41c5
-# LU2OnW5efxCeqQmW+VhZuJF1+4RkPKCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
-# u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
-# cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
-# BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
-# ggEPADCCAQoCggEBAMSWhFMKzV8qMywbj1H6lg4h+cvR9CtxmQ1J3V9uf9+R2d9p
-# laoDqCNS+q8wz+t+QffvmN2YbcsHrXp6O7bF+xYjuPtIurv8wM69RB/Uy1xvsUKD
-# L/ZDQZ0zewMDLb5Nma7IYJCPYelHiSeO0jsyLXTnaOG0Rq633SUkuPv+C3N8GzVs
-# KDnxozmHGYq/fdQEv9Bpci2DkRTtnHvuIreeqsg4lICeTIny8jMY4yC6caQkamzp
-# GcJWWO0YZlTQOaTgHoVVnSZAvdJhzxIX2wqd0/VaVIbpN0HcPKtMrgXv0O2Bl4Lo
-# tmZR7za7H6hamxaPYQHHyReFs2xM7hlVVWhnfpECAwEAAaNoMGYwDgYDVR0PAQH/
-# BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMDMCAGA1UdEQQZMBeCFWptYXJ0aW5A
-# bWljcm9zb2Z0LmNvbTAdBgNVHQ4EFgQUCB04A8myETdoRJU9zsScvFiRGYkwDQYJ
-# KoZIhvcNAQELBQADggEBAEjsxpuXMBD72jWyft6pTxnOiTtzYykYjLTsh5cRQffc
-# z0sz2y+jL2WxUuiwyqvzIEUjTd/BnCicqFC5WGT3UabGbGBEU5l8vDuXiNrnDf8j
-# zZ3YXF0GLZkqYIZ7lUk7MulNbXFHxDwMFD0E7qNI+IfU4uaBllsQueUV2NPx4uHZ
-# cqtX4ljWuC2+BNh09F4RqtYnocDwJn3W2gdQEAv1OQ3L6cG6N1MWMyHGq0SHQCLq
-# QzAn5DpXfzCBAePRcquoAooSJBfZx1E6JeV26yw2sSnzGUz6UMRWERGPeECSTz3r
-# 8bn3HwYoYcuV+3I7LzEiXOdg3dvXaMf69d13UhMMV1sxggHdMIIB2QIBATA0MCAx
-# HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
-# NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
-# AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
-# CSqGSIb3DQEJBDEiBCBhynXS9rZbqQgEufkcAwQp3Fg3tQF3RL1j8WOaBA53lTAN
-# BgkqhkiG9w0BAQEFAASCAQBDaINULRQOen/auWyfBA5nVFetGIHjN5iz45wfJr/f
-# nXGViZqBMOey40ko45fWzAKoeEG4Q8e30HkXuKzuUDQ1XYVksIcK8KmBFVQtfg+G
-# bE3CrdnbYrGPeHA/BVkmS+c2JfZqjgiEarPbmOn8p1ODigmVrPnjjfNuwT/gqQK5
-# VxDFpVqehmBwca83sRdMn0zicMjcqsbJKKdl14t2ekRYrYfiePtjCvGp/AJz+jou
-# ZZcQzak/0hSb+ihlk0jy7cl0FqImB+ZdsdR6qEtsTpfzuBqoBkk2e3MGh1WT6DWj
-# AHjkPVHyjK7JlPw+lh85rmkKax9VVlIVCi7ep8z5xW+8
-# SIG # End signature block
