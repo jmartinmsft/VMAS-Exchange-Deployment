@@ -1,9 +1,9 @@
 ﻿<#
 # DeployVMASServer-Step2.ps1
-# Modified 2021/10/03
+# Modified 16 November 2022
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.2
+# Version: v20221116.1010
 
 # Script should automatically start when the virtual machine starts
 # Syntax for running this script:
@@ -25,7 +25,6 @@
 //
 //**********************************************************************​
 #>
-Clear-Host
 function Install-Net4Dot7Two {
     ## Check if the currently installed version of Microsoft .NET Framework is below 4.7.2
     [int]$NetVersion = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full" -ErrorAction Ignore).Release
@@ -80,6 +79,7 @@ function CheckFor2919355 {
         return $true
     }
 }
+#region Start script
 Start-Transcript -Path C:\Temp\DeployServer-Log.txt -Append -NoClobber | Out-Null
 Write-Host "Running the Step2 script now..." -ForegroundColor Yellow
 Write-Host "Getting server name..." -ForegroundColor Green -NoNewline
@@ -90,41 +90,38 @@ Write-Host "COMPLETE"
 Write-Host "Getting variables for setup..." -ForegroundColor Green -NoNewline
 Import-LocalizedData -BindingVariable ExchangeInstall_LocalizedStrings -FileName $ServerName"-ExchangeInstall-strings.psd1"
 Write-Host "COMPLETE"
+#endregion
+#region Enable AutoLogon
 ## Set AutoLogon for the next step
 Write-Host "Preparing server for the next step..." -ForegroundColor Green -NoNewline
 $RunOnceKey = "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" 
 $WinLogonKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
 Set-ItemProperty -Path $WinLogonKey -Name "AutoAdminLogon" -Value "1"
 Set-ItemProperty -Path $WinLogonKey -Name "AutoLogonCount" -Value "5" 
-Set-ItemProperty -Path $WinLogonKey -Name "DefaultUserName" -Value $ExchangeInstall_LocalizedStrings.res_0013
-Set-ItemProperty -Path $WinLogonKey -Name "DefaultPassword" -Value $ExchangeInstall_LocalizedStrings.res_0012
-Set-ItemProperty -Path $WinLogonKey -Name "DefaultDomainName" -Value $ExchangeInstall_LocalizedStrings.res_0014
+Set-ItemProperty -Path $WinLogonKey -Name "DefaultUserName" -Value $ExchangeInstall_LocalizedStrings.Username
+Set-ItemProperty -Path $WinLogonKey -Name "DefaultPassword" -Value $ExchangeInstall_LocalizedStrings.DomainPassword
+Set-ItemProperty -Path $WinLogonKey -Name "DefaultDomainName" -Value $ExchangeInstall_LocalizedStrings.Domain
 Write-Host "COMPLETE"
-## Complete steps required for Exchange server deployment
-## Prepare Windows to automatically login after reboot and run the next step
+#endregion
+#region Enable next step after reboot
 Set-ItemProperty -Path $RunOnceKey -Name "ExchangeSetup" -Value ('C:\Windows\System32\WindowsPowerShell\v1.0\Powershell.exe -executionPolicy Unrestricted -File C:\Temp\DeployVMASServer-Step3.ps1')
-## Check and install Microsoft .NET Framework based on Exchange version
+#endregion
+#region Microsoft .NET Framework install
 Write-Host "Checking the version of Microsoft .NET Framework..." -ForegroundColor Green -NoNewline
-switch ($ExchangeInstall_LocalizedStrings.res_0003) {
+switch ($ExchangeInstall_LocalizedStrings.ExchangeVersion) {
     2 { Install-Net4Dot8 }
     1 { Install-Net4Dot8 }
-    0 { switch ($ExchangeInstall_LocalizedStrings.res_0016) {
+    0 { switch ($ExchangeInstall_LocalizedStrings.DotNetResult) {
             0 { Install-Net4Dot8 }
             1 { Install-Net4Dot7Two }
         }
     }
 }
 Write-Host "COMPLETE"
-## Check if Exchange prerequisites are installed
+#endregion
+#region VS 2012 install
 $vs2012Install = $true
-$vs2013Install = $true
-$ucmaInstall =$true
-$rewriteInstall = $true
-if((Get-Item "C:\Program Files\Microsoft UCMA 4.0\Runtime\MediaPerf.dll" -ErrorAction Ignore) -and (Get-Item "C:\Program Files\Microsoft UCMA 4.0\Runtime\MediaPerf.dll" -ErrorAction Ignore).VersionInfo.ProductVersion -ne 5.0.8308.0) {$ucmaInstall = $false}
-if((Get-Item $env:windir\system32\vccorlib120.dll -ErrorAction Ignore) -and (Get-Item $env:windir\system32\vccorlib120.dll -ErrorAction Ignore).VersionInfo.ProductVersion -ge 12.0.21005.1) {$vs2013Install = $false}
 if((Get-Item $env:windir\system32\vccorlib110.dll -ErrorAction Ignore) -and (Get-Item $env:windir\system32\vccorlib110.dll -ErrorAction Ignore).VersionInfo.ProductVersion -ge 11.0.51106.1) {$vs2012Install = $false}
-if(Get-Item $env:windir\system32\inetsrv\rewrite.dll -ErrorAction Ignore) {$rewriteInstall = $false}
-## Look to see if Visual C++ Redistributable Package for Visual Studio 2012 is installed
 Write-Host "Checking for Visual C++ Redistributable Package for Visual Studio 2012..." -ForegroundColor Green -NoNewline
 if($vs2012Install -eq $false) { 
     Write-Host "FOUND"
@@ -146,7 +143,10 @@ else {
     }
     Write-Host "COMPLETE"
 }
-## Look to see if Visual C++ Redistributable Package for Visual Studio 2013 is installed
+#endregion
+#region VS 2013 install
+$vs2013Install = $true
+if((Get-Item $env:windir\system32\vccorlib120.dll -ErrorAction Ignore) -and (Get-Item $env:windir\system32\vccorlib120.dll -ErrorAction Ignore).VersionInfo.ProductVersion -ge 12.0.21005.1) {$vs2013Install = $false}
 Write-Host "Checking for Visual C++ Redistributable Package for Visual Studio 2013..." -ForegroundColor Green -NoNewline
 if($vs2013Install -eq $false) { 
     Write-Host "FOUND"
@@ -168,34 +168,36 @@ else {
     }
     Write-Host "COMPLETE"
 }
+#endregion
+#region URL rewrite install
+$rewriteInstall = $true
+if(Get-Item $env:windir\system32\inetsrv\rewrite.dll -ErrorAction Ignore) {$rewriteInstall = $false}
 ## Look to see if URL Rewrite is installed
-        Write-Host "Checking for URL Rewrite..." -ForegroundColor Green -NoNewline
-        if($rewriteInstall -eq $false) {
-            Write-Host "FOUND"
-        }
-        else {
-            Write-Host "MISSING" -ForegroundColor Red
-            Write-Host "Downloading URL Rewrite..." -ForegroundColor Green -NoNewline
-            $Url = "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi"
-            $Path = "C:\Temp\rewrite_amd64_en-US.msi"
-            $webClient = New-Object System.Net.WebClient
-            $webClient.DownloadFile($url, $path)
-            Write-Host "COMPLETE"
-            Write-Host "Installing URL Rewrite..." -ForegroundColor Green -NoNewline
-            C:\Temp\rewrite_amd64_en-US.msi /passive /norestart /log C:\Temp\rewrite.log
-            [boolean]$InstallComplete = $false
-            [int]$InstallCheck = 0
-            while($InstallComplete -eq $false) {
-                Start-Sleep -Seconds 30
-                if((Get-Content C:\Temp\rewrite.log) -match "completed successfully" -or $InstallCheck -eq 5) {
-                    $InstallComplete = $true
-                }
-                else {
-                    $InstallCheck++
-                }
-            }
-            Write-Host "COMPLETE"
-        }
+Write-Host "Checking for URL Rewrite..." -ForegroundColor Green -NoNewline
+if($rewriteInstall -eq $false) {
+    Write-Host "FOUND"
+}
+else {
+    Write-Host "MISSING" -ForegroundColor Red
+    Write-Host "Downloading URL Rewrite..." -ForegroundColor Green -NoNewline
+    $Url = "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi"
+    $Path = "C:\Temp\rewrite_amd64_en-US.msi"
+    $webClient = New-Object System.Net.WebClient
+    $webClient.DownloadFile($url, $path)
+    Write-Host "COMPLETE"
+    Write-Host "Installing URL Rewrite..." -ForegroundColor Green -NoNewline
+    C:\Temp\rewrite_amd64_en-US.msi /passive /norestart /log C:\Temp\rewrite.log
+    Start-Sleep -Seconds 2
+    while(Get-Process msiexec -ErrorAction SilentlyContinue | where {$_.MainWindowTitle -like "*rewrite*"} ) {
+        Write-Host "..." -ForegroundColor Green -NoNewline
+        Start-Sleep -Seconds 2
+    }
+    Write-Host "COMPLETE"
+}
+#endregion
+#region UCMA install
+$ucmaInstall =$true
+if((Get-Item "C:\Program Files\Microsoft UCMA 4.0\Runtime\MediaPerf.dll" -ErrorAction Ignore) -and (Get-Item "C:\Program Files\Microsoft UCMA 4.0\Runtime\MediaPerf.dll" -ErrorAction Ignore).VersionInfo.ProductVersion -ne 5.0.8308.0) {$ucmaInstall = $false}
 ## Look to see if Unified Communications Managed API 4.0 is installed
 Write-Host "Checking for Unified Communications Managed API 4.0..." -ForegroundColor Green -NoNewline
 if($ucmaInstall -eq $false) { 
@@ -204,7 +206,7 @@ if($ucmaInstall -eq $false) {
 else {
     ## Download and install Unified Communications Managed API 4.0
     Write-Host "MISSING" -ForegroundColor Red
-    if($ExchangeInstall_LocalizedStrings.res_0037 -ne 1) {
+    if($ExchangeInstall_LocalizedStrings.ServerCore -ne 1) {
         Write-Host "Downloading Unified Communications Managed API 4.0..." -ForegroundColor Green -NoNewline
         $Url = "https://download.microsoft.com/download/2/C/4/2C47A5C1-A1F3-4843-B9FE-84C0032C61EC/UcmaRuntimeSetup.exe"
         $Path = "C:\Temp\UcmaRuntimeSetup.exe" 
@@ -215,10 +217,10 @@ else {
         C:\Temp\UcmaRuntimeSetup /passive /norestart
     }
 else {## Need to install from media
-        $SetupExePath = [string]($ExchangeInstall_LocalizedStrings.res_0035).ToLower()
-        if($ExchangeInstall_LocalizedStrings.res_0036 -ne $null) {
+        $SetupExePath = [string]($ExchangeInstall_LocalizedStrings.ExchSetupPath).ToLower()
+        if($ExchangeInstall_LocalizedStrings.ExchISOPath -ne $null) {
             if(!(Test-Path SetupExePath)) {
-                Mount-DiskImage -ImagePath $ExchangeInstall_LocalizedStrings.res_0036
+                Mount-DiskImage -ImagePath $ExchangeInstall_LocalizedStrings.ExchISOPath
             }
         }
         if($SetupExePath -like "*:\*") {$setupFile = [ScriptBlock]::Create(($SetupExePath).Substring(0,3) + "UCMARedist\setup.exe  /passive /norestart")}
@@ -232,7 +234,9 @@ else {## Need to install from media
     }
     Write-Host "COMPLETE"
 }
-if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {
+#endregion
+#region Remove WMF 5 from Exchange 2013 server
+if($ExchangeInstall_LocalizedStrings.ExchangeVersion -eq 0) {
     Write-Host "Removing Windows Management Framework 5.0" -ForegroundColor Green -NoNewline
     wusa.exe /uninstall /kb:3134758 /quiet /norestart
     while(Get-Process wusa -ErrorAction SilentlyContinue) {
@@ -240,37 +244,5 @@ if($ExchangeInstall_LocalizedStrings.res_0003 -eq 0) {
         Start-Sleep -Seconds 10
     }
 }
+#endregion
 Restart-Computer -Force
-# SIG # Begin signature block
-# MIIFvQYJKoZIhvcNAQcCoIIFrjCCBaoCAQExDzANBglghkgBZQMEAgEFADB5Bgor
-# BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAzNszhnnJTx0+K
-# bhvWSsvEm3ctYDRqAvE2Fqsqhc/+UqCCAzYwggMyMIICGqADAgECAhA8ATOaNhKD
-# u0LkWaETEtc0MA0GCSqGSIb3DQEBCwUAMCAxHjAcBgNVBAMMFWptYXJ0aW5AbWlj
-# cm9zb2Z0LmNvbTAeFw0yMTAzMjYxNjU5MDdaFw0yMjAzMjYxNzE5MDdaMCAxHjAc
-# BgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQAD
-# ggEPADCCAQoCggEBAMSWhFMKzV8qMywbj1H6lg4h+cvR9CtxmQ1J3V9uf9+R2d9p
-# laoDqCNS+q8wz+t+QffvmN2YbcsHrXp6O7bF+xYjuPtIurv8wM69RB/Uy1xvsUKD
-# L/ZDQZ0zewMDLb5Nma7IYJCPYelHiSeO0jsyLXTnaOG0Rq633SUkuPv+C3N8GzVs
-# KDnxozmHGYq/fdQEv9Bpci2DkRTtnHvuIreeqsg4lICeTIny8jMY4yC6caQkamzp
-# GcJWWO0YZlTQOaTgHoVVnSZAvdJhzxIX2wqd0/VaVIbpN0HcPKtMrgXv0O2Bl4Lo
-# tmZR7za7H6hamxaPYQHHyReFs2xM7hlVVWhnfpECAwEAAaNoMGYwDgYDVR0PAQH/
-# BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMDMCAGA1UdEQQZMBeCFWptYXJ0aW5A
-# bWljcm9zb2Z0LmNvbTAdBgNVHQ4EFgQUCB04A8myETdoRJU9zsScvFiRGYkwDQYJ
-# KoZIhvcNAQELBQADggEBAEjsxpuXMBD72jWyft6pTxnOiTtzYykYjLTsh5cRQffc
-# z0sz2y+jL2WxUuiwyqvzIEUjTd/BnCicqFC5WGT3UabGbGBEU5l8vDuXiNrnDf8j
-# zZ3YXF0GLZkqYIZ7lUk7MulNbXFHxDwMFD0E7qNI+IfU4uaBllsQueUV2NPx4uHZ
-# cqtX4ljWuC2+BNh09F4RqtYnocDwJn3W2gdQEAv1OQ3L6cG6N1MWMyHGq0SHQCLq
-# QzAn5DpXfzCBAePRcquoAooSJBfZx1E6JeV26yw2sSnzGUz6UMRWERGPeECSTz3r
-# 8bn3HwYoYcuV+3I7LzEiXOdg3dvXaMf69d13UhMMV1sxggHdMIIB2QIBATA0MCAx
-# HjAcBgNVBAMMFWptYXJ0aW5AbWljcm9zb2Z0LmNvbQIQPAEzmjYSg7tC5FmhExLX
-# NDANBglghkgBZQMEAgEFAKB8MBAGCisGAQQBgjcCAQwxAjAAMBkGCSqGSIb3DQEJ
-# AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8G
-# CSqGSIb3DQEJBDEiBCAFZSu/6zdLDOdwxJ3n8UmGr1l1ZkN2Cl63GJhS5Yt5WzAN
-# BgkqhkiG9w0BAQEFAASCAQCnprRegb1J4tQe6Sn0R94tXoKiQwH4TqNXjAAiodVx
-# cvHRP8ca3L5ZFkllqTtBvDislacS3/WCNqAxAe2FdlIhGZfbjhI5d8gFcGlNsTf3
-# W6MImev0BudjAHkyxOdoM2NWkM9JqUbs+yEwhmmcwazbHfKNFocaz7C51ZHKKN5Z
-# R5C6NWA83fE2vLbI6uuYOc6SNGx9T7Iy/zaqqJlISjk5kdY4JMBwFus3Iue/fcQH
-# VleVaRqTbhvA8Tw19fDV1FUPBGZtOup2GGyBArTDrIBFeJvIBa2WQ01n8zHxDbxI
-# yijFsIgr7FF2ufqqNNiqG2WPoIApDk8Xhd75hRHxvaCt
-# SIG # End signature block

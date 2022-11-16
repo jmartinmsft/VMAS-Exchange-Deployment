@@ -1,9 +1,9 @@
 ﻿<#
 # Deploy-ExchangeServer.ps1
-# Modified 14 June 2022
+# Modified 16 November 2022
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v1.4
+# Version: v20221116.0941
 # Syntax for running this script:
 #
 # .\Deploy-ExchangeServer.ps1
@@ -33,9 +33,9 @@ function Test-ADAuthentication {
 }
 function Check-ServerCore {
     if((Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\').InstallationType -eq "Server Core") {
-        Add-Content -Path $serverVarFile -Value ('res_0037 = 1')
+        Add-Content -Path $serverVarFile -Value ('ServerCore = 1')
         $SetupExePath = $SetupExePath.Replace("\","\\")
-        Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $SetupExePath)
+        Add-Content -Path $serverVarFile -Value ('ExchSetupPath = ' + $SetupExePath)
         return $true
     }
     return $false
@@ -49,7 +49,7 @@ function Get-ExchangeISO {
         [string]$exchISO = $fileBrowser.FileName
         Mount-DiskImage -ImagePath $exchISO
         $exchISO = $exchISO.Replace("\","\\")
-        Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $exchISO)
+        Add-Content -Path $serverVarFile -Value ('ExchISOPath = ' + $exchISO)
 }
 function Prompt-ExchangeDownload {
     $yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Yes'
@@ -67,7 +67,7 @@ function Prompt-ExchangeDownload {
                 Write-Host "COMPLETE"
                 Mount-DiskImage -ImagePath $Path
                 $Path = $Path.Replace("\","\\")
-                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $path)
+                Add-Content -Path $serverVarFile -Value ('ExchISOPath = ' + $path)
                 }
             1{
                 Write-Host "Downloading Exchange 2016 CU23..." -ForegroundColor Green -NoNewline
@@ -78,7 +78,7 @@ function Prompt-ExchangeDownload {
                 Write-Host "COMPLETE"
                 Mount-DiskImage -ImagePath $Path
                 $Path = $Path.Replace("\","\\")
-                Add-Content -Path $serverVarFile -Value ('res_0036 = ' + $Path)
+                Add-Content -Path $serverVarFile -Value ('ExchISOPath = ' + $Path)
                 }
             0{
                 Write-Host "Downloading Exchange 2013 CU23..." -ForegroundColor Green -NoNewline
@@ -224,7 +224,7 @@ function Get-DAGIPAddress {
             }
         }
     }
-    Add-Content -Path $serverVarFile -Value ('res_0033 = ' + $dagIPAddresses)
+    Add-Content -Path $serverVarFile -Value ('DagIpAddress = ' + $dagIPAddresses)
 }
 function AskFor-DAGIPAddress {
     param([int]$ipCount)
@@ -271,7 +271,7 @@ function Select-ExchangeVersion {
     $ex19 = New-Object System.Management.Automation.Host.ChoiceDescription 'Exchange 201&9', 'Exchange version: Exchange 2019'
     $exOption = [System.Management.Automation.Host.ChoiceDescription[]]($ex15, $ex16, $ex19)
     $exVersion = $Host.UI.PromptForChoice("Server deployment script","What version of Exchange are you installing", $exOption, 2)
-    Add-Content -Path $serverVarFile -Value ('res_0003 = ' + $exVersion)
+    Add-Content -Path $serverVarFile -Value ('ExchangeVersion = ' + $exVersion)
     return $exVersion
 }
 function Get-MailboxDatabaseStatus {
@@ -308,7 +308,7 @@ function Get-ExchangeExe {
     ## Add something to get the Exchange install path
     [string]$exchSetupExe = (Get-Volume | where {$_.FileSystemLabel -like "EXCHANGESERVER*"}).DriveLetter
     $exchSetupExe = "$($exchSetupExe):\\setup.exe"
-    Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $exchSetupExe)
+    Add-Content -Path $serverVarFile -Value ('ExchSetupPath = ' + $exchSetupExe)
     return $exchSetupExe
 }
 function Validate-DagName {
@@ -346,7 +346,7 @@ function Get-ServerCertificate {
     }
     if($exportCert -eq $false) { return $null }
     else { 
-        Add-Content -Path $serverVarFile -Value ('res_0002 = ' + $thumbprint)
+        Add-Content -Path $serverVarFile -Value ('CertThumprint = ' + $thumbprint)
         $thumbprint = $thumbprint | Out-String
          return $thumbprint
         
@@ -358,12 +358,12 @@ function Get-ServerCertificate {
 function Create-NewDAG {
     ## Get information for create a new database availability group
     $DagName = Read-HostWithColor "Enter the name for the new Database Availability Group: "
-    Add-Content -Path $serverVarFile -Value ('res_0001 = ' + $DagName)
+    Add-Content -Path $serverVarFile -Value ('DagName = ' + $DagName)
     $witnessServer = Read-HostWithColor "Enter the name of the witness server: "
-    Add-Content -Path $serverVarFile -Value ('res_0018 = ' + $witnessServer)
+    Add-Content -Path $serverVarFile -Value ('WitnessServer = ' + $witnessServer)
     $witnessDirectory = Read-HostWithColor "Enter the path for the witness directory: "
     $witnessDirectory = $witnessDirectory.Replace("\","\\")
-    Add-Content -Path $serverVarFile -Value ('res_0019 = ' + $witnessDirectory)
+    Add-Content -Path $serverVarFile -Value ('WitnessDirectory = ' + $witnessDirectory)
 }
 function Skip-DagCheck {
     ## Don't verify the existence of the DAG for multiple server deployments
@@ -385,7 +385,7 @@ function Check-NewDeployment {
     }
     else {
         $DagName = Read-HostWithColor "Enter the Database Availability Group name: "
-        Add-Content -Path $serverVarFile -Value ('res_0001 = ' + $DagName)
+        Add-Content -Path $serverVarFile -Value ('DagName = ' + $DagName)
     }
 }
 function Create-ServerVariableFile {
@@ -398,9 +398,14 @@ function Create-ServerVariableFile {
     Add-Content -Path $serverVarFileName -Value '###PSLOC'
     return $serverVarFileName
 }
+#region Start script
 [string]$ServerName = $env:COMPUTERNAME
 $serverVarFile = Create-ServerVariableFile
-Add-Content -Path $serverVarFile -Value ('res_0000 = ' + $ServerName)
+Add-Content -Path $serverVarFile -Value ('ServerName = ' + $ServerName)
+Write-Warning "You will have the option to download the Exchange installation files if they aren't already available."
+Add-Type -AssemblyName System.Windows.Forms
+#endregion
+#region Server core check
 $isServerCore = Check-ServerCore
 if($isServerCore -eq $true -and $SetupExePath -like $null) {
         Write-Warning "You must specify the setup path when running Server Core."
@@ -408,16 +413,15 @@ if($isServerCore -eq $true -and $SetupExePath -like $null) {
         Start-Sleep -Seconds 3
         break
 }
-Write-Warning "You will have the option to download the Exchange installation files if they aren't already available."
-Start-Sleep -Seconds 3
-Add-Type -AssemblyName System.Windows.Forms
-## Ensure the AD PowerShell module is installed
+#endregion
+#region AD PowerShell module check
 Write-Host "Checking for prerequisites..." -ForegroundColor Green
 if(!(Get-WindowsFeature RSAT-AD-PowerShell).Installed) {
     Write-Host "Installing Active Directory PowerShell module..." -ForegroundColor Green
     Install-WindowsFeature -Name RSAT-AD-PowerShell | Out-Null
 }
-## Get variables from the admin
+#endregion
+#region Get admin credentials
 $validUPN = $false
 $domain = $env:USERDNSDOMAIN
 $UserName = $env:USERNAME
@@ -441,11 +445,12 @@ if($isSchemaAdmin -eq $false) {
     Write-Host "Your account is not a member of the Schema Admins group. Please update group membership or ensure the schema has been updated prior to running the next step." -ForegroundColor Red
     Start-Sleep -Seconds 2
 }
-Add-Content -Path $serverVarFile -Value ('res_0012 = ' + $Password)
-Add-Content -Path $serverVarFile -Value ('res_0014 = ' + $domain)
-Add-Content -Path $serverVarFile -Value ('res_0031 = ' + $domainController)
-Add-Content -Path $serverVarFile -Value ('res_0013 = ' + $UserName)
-## Update variable file with server info
+Add-Content -Path $serverVarFile -Value ('DomainPassword = ' + $Password)
+Add-Content -Path $serverVarFile -Value ('Domain = ' + $domain)
+Add-Content -Path $serverVarFile -Value ('DomainController = ' + $domainController)
+Add-Content -Path $serverVarFile -Value ('Username = ' + $UserName)
+#endregion
+#region Exchange organization and recover server check
 $askForCertificateLater = $true
 $exchServer = $null
 $exchOrgPresent = $false
@@ -461,7 +466,7 @@ if($exchContainer -notlike $null) {
     if($exchServersContainer.DistinguishedName.Length -gt 0) {
         Write-Host "Checking for existing Exchange servers..." -ForegroundColor Green
         $exchServers = Get-ADObject -LDAPFilter "(objectClass=msExchExchangeServer)" -SearchBase $exchServersContainer -SearchScope OneLevel -Properties msExchCurrentServerRoles
-        if($exchServers.Count -gt 0) {
+        if($exchServers -notlike $null) {
             $exchOrgPresent = $true
             if($exchServers -match $ServerName) {
                 Write-Warning "This is a recover server"
@@ -479,12 +484,14 @@ if($exchContainer -notlike $null) {
     else { Write-Host "No Exchange organization found." -ForegroundColor Green  }
     $exchServer = $exchServer.Name
 }
-Add-Content -Path $serverVarFile -Value ('res_0004 = ' + $exInstallType)
+Add-Content -Path $serverVarFile -Value ('ExchangeInstallType = ' + $exInstallType)
+#endregion
+#region Connect to remote PowerShell
 ## Check for an Exchange management session, otherwise verify there is no Exchange organization in the forest
 if(!(Get-PSSession | Where { $_.ConfigurationName -eq "Microsoft.Exchange" } )) {
     if($exchOrgPresent -eq $true) { Connect-Exchange }
     else {
-        Add-Content -Path $serverVarFile -Value ('res_0028 = 1')
+        Add-Content -Path $serverVarFile -Value ('ExchangeOrgMissing = 1')
         ## Prompt the user for an Exchange server to setup a remote PowerShell session
         $yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Yes'
         $no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'No'
@@ -492,12 +499,13 @@ if(!(Get-PSSession | Where { $_.ConfigurationName -eq "Microsoft.Exchange" } )) 
         $newOrgResult= $Host.UI.PromptForChoice("Server deployment script","Would you like to create a new Exchange organization?", $yesNoOption, 0)
         if($newOrgResult -eq 0) { 
             $exOrgName = Read-HostWithColor "Enter the name for the new Exchange organization: "
-            Add-Content -Path $serverVarFile -Value ('res_0029 = ' + $exOrgName)
+            Add-Content -Path $serverVarFile -Value ('ExchangeOrgName = ' + $exOrgName)
         }
     }
 }
 else { $exchServer = (Get-PSSession | Where { $_.ConfigurationName -eq "Microsoft.Exchange" } | Select -Last 1).ComputerName }
-## Get Exchange setup information
+#endregion
+#region Exchange install prompts
 switch ($exInstallType) {
     0 { $exReady = $false
         while($exReady -eq $false) {
@@ -530,20 +538,20 @@ switch ($exInstallType) {
         }
         else{
             $SetupExePath = $SetupExePath.Replace("\","\\")
-            Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $SetupExePath)
+            Add-Content -Path $serverVarFile -Value ('ExchSetupPath = ' + $SetupExePath)
         }
         switch ($exVersion) {
             2 { $exMbxRole = New-Object System.Management.Automation.Host.ChoiceDescription '&Mailbox', 'Mailbox server role'
                 $exEdgeRole = New-Object System.Management.Automation.Host.ChoiceDescription '&Edge Transport', 'Edge Transport server role'
                 $exRoleOption = [System.Management.Automation.Host.ChoiceDescription[]]($exMbxRole, $exEdgeRole)
                 $exRoleResult = $Host.UI.PromptForChoice("Server deployment script","What Exchange server roles should be installed:", $exRoleOption, 0)
-                Add-Content -Path $serverVarFile -Value ('res_0005 = ' + $exRoleResult)
+                Add-Content -Path $serverVarFile -Value ('ExchangeRole = ' + $exRoleResult)
             }
             1 { $exMbxRole = New-Object System.Management.Automation.Host.ChoiceDescription '&Mailbox', 'Mailbox server role'
                 $exEdgeRole = New-Object System.Management.Automation.Host.ChoiceDescription '&Edge Transport', 'Edge Transport server role'
                 $exRoleOption = [System.Management.Automation.Host.ChoiceDescription[]]($exMbxRole, $exEdgeRole)
                 $exRoleResult = $Host.UI.PromptForChoice("Server deployment script","What Exchange server roles should be installed:", $exRoleOption, 0)
-                Add-Content -Path $serverVarFile -Value ('res_0005 = ' + $exRoleResult)
+                Add-Content -Path $serverVarFile -Value ('ExchangeRole = ' + $exRoleResult)
             }
             0{  $exAllRoles = New-Object System.Management.Automation.Host.ChoiceDescription '&All', 'All roles'
                 $exMbxRole = New-Object System.Management.Automation.Host.ChoiceDescription '&Mailbox', 'Mailbox server role'
@@ -551,13 +559,13 @@ switch ($exInstallType) {
                 $exEdgeRole = New-Object System.Management.Automation.Host.ChoiceDescription '&Edge Transport', 'Edge Transport server role'
                 $exRoleOption = [System.Management.Automation.Host.ChoiceDescription[]]($exAllRoles, $exMbxRole, $exCasRole, $exEdgeRole)
                 $exRoleResult = $Host.UI.PromptForChoice("Server deployment script","What Exchange server roles should be installed:", $exRoleOption, 0)
-                Add-Content -Path $serverVarFile -Value ('res_0005 = ' + $exRoleResult)
+                Add-Content -Path $serverVarFile -Value ('ExchangeRole = ' + $exRoleResult)
                 ## Ask which version of Microsoft .NET Framework to install
                 $seven = New-Object System.Management.Automation.Host.ChoiceDescription '.NET 4.&7.2', '4.7.2'
                 $eight = New-Object System.Management.Automation.Host.ChoiceDescription '.NET 4.&8', '4.8'
                 $dotNetOption = [System.Management.Automation.Host.ChoiceDescription[]]($eight, $seven)
                 $dotNetResult = $Host.UI.PromptForChoice("Server deployment script","Which version of the Microsoft .NET Framework do you want to instll?", $dotNetOption, 0)
-                Add-Content -Path $serverVarFile -Value ('res_0016 = ' + $dotNetResult)
+                Add-Content -Path $serverVarFile -Value ('DotNetResult = ' + $dotNetResult)
             }
         }
         ## Check if the certificate from the remote PowerShell session Exchange server should be used
@@ -572,16 +580,16 @@ switch ($exInstallType) {
         ## Get hostname values for the Exchange virtual directories
 
         $intHostname = (Read-HostWithColor "Enter the hostname for the internal URLs: ").ToLower()
-        Add-Content -Path $serverVarFile -Value ('res_0020 = ' + $intHostname)
+        Add-Content -Path $serverVarFile -Value ('internalHostname = ' + $intHostname)
         $extHostname = (Read-HostWithColor "Enter the hostname for the external URLs: ").ToLower()
-        Add-Content -Path $serverVarFile -Value ('res_0021 = ' + $extHostname)
+        Add-Content -Path $serverVarFile -Value ('externalHostname = ' + $extHostname)
         ## Check whether the Exchange server should be added to an existing DAG, a new DAG, or none
         $ExistingDag = New-Object System.Management.Automation.Host.ChoiceDescription '&Existing', 'Existing'
         $NewDag = New-Object System.Management.Automation.Host.ChoiceDescription '&New', 'New'
         $NoDag = New-Object System.Management.Automation.Host.ChoiceDescription '&Standalone', 'None'
         $dagOption = [System.Management.Automation.Host.ChoiceDescription[]]($ExistingDag, $NewDag, $NoDag)
         $dagResult = $Host.UI.PromptForChoice("Server deployment script","Would you like to join and existing DAG, create a new DAG, or make a standalone server?", $dagOption, 0)
-        Add-Content -Path $serverVarFile -Value ('res_0015 = ' + $dagResult)
+        Add-Content -Path $serverVarFile -Value ('DagResult = ' + $dagResult)
         switch ($dagResult) {
             0 { ## Join a DAG if Exchange is present otherwise create a DAG
                 if($exchOrgPresent -eq $true) {
@@ -596,7 +604,7 @@ switch ($exInstallType) {
                                 $validDag = Skip-DagCheck
                             }
                         }
-                        Add-Content -Path $serverVarFile -Value ('res_0001 = ' + $DagName)
+                        Add-Content -Path $serverVarFile -Value ('DagName = ' + $DagName)
                     }
                     ## Create a new DAG if there is no DAG in the environment or skip for deploying multiple servers
                     else { Check-NewDeployment }
@@ -609,7 +617,7 @@ switch ($exInstallType) {
                 $no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'No'
                 $dagTypeOption = [System.Management.Automation.Host.ChoiceDescription[]]($yes, $no)
                 $dagType = $Host.UI.PromptForChoice("Server deployment script","Do you want to create the DAG without an administrative access point? (aka:IP-less)", $dagTypeOption, 0)
-                Add-Content -Path $serverVarFile -Value ('res_0032 = ' + $dagType)
+                Add-Content -Path $serverVarFile -Value ('DagType = ' + $dagType)
                 Create-NewDAG
                 if($dagType -eq 1) {
                     Get-DAGIPAddress
@@ -621,9 +629,9 @@ switch ($exInstallType) {
         $exVersion = (Get-ExchangeServer $ServerName).AdminDisplayVersion
         $exVersion = $exVersion.Substring(11,1)
         switch($exVersion) {
-            0 {Add-Content -Path $serverVarFile -Value ('res_0003 = 0')}
-            1 {Add-Content -Path $serverVarFile -Value ('res_0003 = 1')}
-            2 {Add-Content -Path $serverVarFile -Value ('res_0003 = 2')}
+            0 {Add-Content -Path $serverVarFile -Value ('ExchangeVersion = 0')}
+            1 {Add-Content -Path $serverVarFile -Value ('ExchangeVersion = 1')}
+            2 {Add-Content -Path $serverVarFile -Value ('ExchangeVersion = 2')}
         }
         ## Get the ISO for Exchange install
         if($SetupExePath -like $null) { 
@@ -632,16 +640,32 @@ switch ($exInstallType) {
         }
         else{
             $SetupExePath = $SetupExePath.Replace("\","\\")
-            Add-Content -Path $serverVarFile -Value ('res_0035 = ' + $SetupExePath)
+            Add-Content -Path $serverVarFile -Value ('ExchSetupPath = ' + $SetupExePath)
         }
         ## Clearing Edge Sync credentials to allow server to be recovered that is part of an Edge subscription
-        Write-Host "Removing any Edge Sync credentials that may be present..." -ForegroundColor Green -NoNewline
-        $dc = (Get-ExchangeServer $ServerName).OriginatingServer
-        [int]$startChar = $ServerName.Length + 4
-        $searchBase = (Get-ExchangeServer $ServerName).DistinguishedName
-        $searchBase = $searchBase.Substring($startChar)
-        Get-ADObject -SearchBase $searchBase -Filter 'cn -eq $ServerName' -SearchScope OneLevel -Properties msExchEdgeSyncCredential | Set-ADObject -Clear msExchEdgeSyncCredential
-        Write-Host "COMPLETE"
+            Write-Host "Checking for Edge subscription..." -ForegroundColor Green -NoNewline
+            $serverSite = (Get-ExchangeServer $ServerName).Site
+            Get-EdgeSubscription | ForEach-Object {
+                if($_.Site -eq $serverSite) {
+                    Write-Host "FOUND"
+                    $severSite = $serverSite.Substring($serverSite.IndexOf("/Sites/")+7)
+                    Add-Content -Path $serverVarFile -Value ('EdgeDomain = ' + $_.Domain)
+                    Add-Content -Path $serverVarFile -Value ('EdgeName = ' + $_.Name)
+                    Add-Content -Path $serverVarFile -Value ('EdgeSite = ' + $serverSite)
+                    Write-Host "Removing existing Edge sync credentials..." -ForegroundColor Green -NoNewline
+                    $dc = (Get-ExchangeServer $ServerName).OriginatingServer
+                    [int]$startChar = $ServerName.Length + 4
+                    $searchBase = (Get-ExchangeServer $ServerName).DistinguishedName
+                    $searchBase = $searchBase.Substring($startChar)
+                    Get-ADObject -SearchBase $searchBase -Filter 'cn -eq $ServerName' -SearchScope OneLevel -Properties msExchEdgeSyncCredential -Server $domainController -Credential $credential | Set-ADObject -Clear msExchEdgeSyncCredential -Server $domainController -Credential $credential
+                    Write-Host "COMPLETE"
+                    $EdgeAdmin = Read-HostWithColor "Enter the admin username for the Edge server ($($_.Name): "
+                    $EdgePassword = Read-Host "Enter the admin password for the Edge server ($($_.Name)) " -AsSecureString
+                    $EdgePassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($EdgePassword))
+                    Add-Content -Path $serverVarFile -Value ('EdgeAdmin = ' + $EdgeAdmin)
+                    Add-Content -Path $serverVarFile -Value ('EdgePassword = ' + $EdgePassword)
+                }
+            }
         ## Check if the servers was offline and if we need the certificate
         if($askForCertificateLater) {
             if(Get-CertificateFromServerCheck) {
@@ -657,7 +681,7 @@ switch ($exInstallType) {
         if(Get-DatabaseAvailabilityGroup -DomainController $domainController | Where { $_.Servers -match $ServerName }) {
             Write-Host "MEMBER"
             [string]$DagName = Get-DatabaseAvailabilityGroup -DomainController $domainController  | Where { $_.Servers -like '*' + $ServerName + '*'}
-            Add-Content -Path $serverVarFile -Value ('res_0001 = ' + $DagName)
+            Add-Content -Path $serverVarFile -Value ('DagName = ' + $DagName)
             ## Check if the databases have multiple copies
             $dbHasCopies = $false
             Write-Host "Checking if the databases for this server have multiple copies..." -ForegroundColor Green
@@ -714,12 +738,12 @@ switch ($exInstallType) {
                     Write-Host "COMPLETE"
                 }
             }
-            if($dbHasCopies -eq $true) { Add-Content -Path $serverVarFile -Value ('res_0025 = 1') }
+            if($dbHasCopies -eq $true) { Add-Content -Path $serverVarFile -Value ('DbHasCopies = 1') }
             ##Remove the Exchange server from the database availability group
             Write-Host "Checking DAC mode for the DAG..." -ForegroundColor Green -NoNewline
             if((Get-DatabaseAvailabilityGroup $DagName -DomainController $domainController ).DatacenterActivationMode -eq "DagOnly") {
                 Write-Host "DagOnly"
-                Add-Content -Path $serverVarFile -Value ('res_0030 = DagOnly')
+                Add-Content -Path $serverVarFile -Value ('DatacenterActivationMode = DagOnly')
                 Write-Host "Checking the number of servers in the DAG..." -ForegroundColor Green
                 if((Get-DatabaseAvailabilityGroup -DomainController $domainController ).Servers.Count -eq 2) {
                     Write-Host "Disabling datacenter activation mode..." -ForegroundColor Yellow
@@ -728,7 +752,7 @@ switch ($exInstallType) {
             }
             else { 
                 Write-Host "OFF"
-                Add-Content -Path $serverVarFile -Value ('res_0030 = Off')
+                Add-Content -Path $serverVarFile -Value ('DatacenterActivationMode = Off')
             }
             Write-Host "Removing server from the DAG..." -ForegroundColor Green -NoNewline
             if($serverOnline -eq $true) {
@@ -779,34 +803,42 @@ switch ($exInstallType) {
         }
     }
 }
+#endregion
+#region Extended Protection
+$yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Yes'
+$no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'No'
+$yesNoOption = [System.Management.Automation.Host.ChoiceDescription[]]($yes, $no)
+$extendedProtectionEnabled = $Host.UI.PromptForChoice("Server deployment script","Do you want to enable Exchange Extended Protection?", $yesNoOption, 1)
+switch ($extendedProtectionEnabled) {
+    0 {Add-Content -Path $serverVarFile -Value ('ExchangeExtendedProtection = 0')}
+    1 {Add-Content -Path $serverVarFile -Value ('ExchangeExtendedProtection = 1')}
+}
+#endregion
+#region Exchange certificate    
 if($thumb.Length -gt 1) {
     ## Export the Exchange certificate
     Write-Host "Exporting current Exchange certificate with thumbprint $thumb from $certServer..." -ForegroundColor Green -NoNewline
     ## Need to check for c:\Temp
     New-Item -ItemType Directory -Path "\\$exchServer\c$\Temp" -ErrorAction Ignore | Out-Null
-    #Export-ExchangeCertificate -Server $certServer -Thumbprint $thumb -FileName "C:\Temp\$ServerName-Exchange.pfx" -BinaryEncoded -Password (ConvertTo-SecureString -String 'Pass@word1' -AsPlainText -Force) | Out-Null
     $cert = Export-ExchangeCertificate -Server $exchServer -Thumbprint $thumb -BinaryEncoded -Password (ConvertTo-SecureString -String 'Pass@word1' -AsPlainText -Force)
     Set-Content -Path "c:\Temp\$ServerName-Exchange.pfx" -Value $cert.FileData -Encoding Byte
-    #$certServerDrive = "\\$exchServer\c$\temp"
-    #New-PSDrive -Name "Script" -PSProvider FileSystem -Root $certServerDrive -Credential $credential
-    #Copy-Item -Path "Script:\$exchServer-Exchange.pfx" -Destination C:\Temp
-    #Remove-PSDrive -Name "Script"
     Write-Host "COMPLETE"
 }
-## Finalize the psd1 file
-Add-Content -Path $serverVarFile -Value ('res_0022 = ' + $exchServer)
+#endregion
+#region Finalize the psd1 file
+Add-Content -Path $serverVarFile -Value ('RunFromServer = ' + $exchServer)
 Add-Content -Path $serverVarFile -Value '###PSLOC'
 Add-Content -Path $serverVarFile -Value "'@"
+#endregion
+#region Close PSSession
 Write-Host "Removing the Exchange remote PowerShell session..." -ForegroundColor Green
-## Disconnect from the Exchange remote PowerShell session
 Remove-PSSession -Name ExchangeShell -ErrorAction Ignore
-#Write-Host "Disabling IPv6..." -ForegroundColor Green -NoNewline
-#New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\ -Name DisabledComponents -Value "0xff" -PropertyType DWORD -ErrorAction SilentlyContinue | Out-Null
-#Write-Host "COMPLETE"
-## Get variables from previous user input
+#endregion
+#region Prepare for Exchange install
 Write-Host "Getting variables for setup..." -ForegroundColor Green -NoNewline
 Import-LocalizedData -BindingVariable ExchangeInstall_LocalizedStrings -FileName $ServerName"-ExchangeInstall-strings.psd1" -BaseDirectory c:\Temp
 Write-Host "COMPLETE"
+#region Enable AutoLogon
 $RunOnceKey = "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" 
 $WinLogonKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
 ## Set AutoLogon for the next step
@@ -814,10 +846,11 @@ Write-Host "Preparing server for the next step..." -ForegroundColor Green -NoNew
 Set-ItemProperty -Path $RunOnceKey -Name "JoinDomain" -Value ('C:\Windows\System32\WindowsPowerShell\v1.0\Powershell.exe -executionPolicy Unrestricted -File C:\Temp\DeployVMASServer-Step2.ps1')
 Set-ItemProperty -Path $WinLogonKey -Name "AutoAdminLogon" -Value "1" 
 Set-ItemProperty -Path $WinLogonKey -Name "AutoLogonCount" -Value "1" 
-Set-ItemProperty -Path $WinLogonKey -Name "DefaultDomainName" -Value $ExchangeInstall_LocalizedStrings.res_0014
-Set-ItemProperty -Path $WinLogonKey -Name "DefaultUserName" -Value $ExchangeInstall_LocalizedStrings.res_0013
-Set-ItemProperty -Path $WinLogonKey -Name "DefaultPassword" -Value $ExchangeInstall_LocalizedStrings.res_0012
+Set-ItemProperty -Path $WinLogonKey -Name "DefaultDomainName" -Value $ExchangeInstall_LocalizedStrings.Domain
+Set-ItemProperty -Path $WinLogonKey -Name "DefaultUserName" -Value $ExchangeInstall_LocalizedStrings.Username
+Set-ItemProperty -Path $WinLogonKey -Name "DefaultPassword" -Value $ExchangeInstall_LocalizedStrings.DomainPassword
 Write-Host "COMPLETE"
+#endregion
 ## Enable Remote Desktop
 Write-Host "Enabling remote desktop on the server..." -ForegroundColor Green -NoNewline
 Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
@@ -829,17 +862,18 @@ if($isServerCore -eq $false) {
     Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" -Name "IsInstalled" -Value 0
     Write-Host "COMPLETE"
 }
-$domainController = $ExchangeInstall_LocalizedStrings.res_0031
-$exInstallPath = $ExchangeInstall_LocalizedStrings.res_0035
-$exResult = $ExchangeInstall_LocalizedStrings.res_0003
+#region Create batch file for setup
+$domainController = $ExchangeInstall_LocalizedStrings.DomainController
+$exInstallPath = $ExchangeInstall_LocalizedStrings.ExchSetupPath
+$exResult = $ExchangeInstall_LocalizedStrings.ExchangeVersion
 ## Create batch file for the Exchange install
 Write-Host "Creating the Exchange setup script..." -ForegroundColor Green -NoNewline
 $installBat = "c:\Temp\exSetup.bat"
 if(Get-Item $installBat -ErrorAction Ignore) {Remove-Item $installBat -ErrorAction Ignore -Force}
 New-Item $installBat -ItemType File -ErrorAction SilentlyContinue | Out-Null
-switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking whether is install is new or recover
+switch ($ExchangeInstall_LocalizedStrings.ExchangeInstallType) { ## Checking whether is install is new or recover
     0 { switch ($exResult) { ## Checking the version of Exchange to install
-            2 { switch ($ExchangeInstall_LocalizedStrings.res_0005) { ## Checking the roles to install for 2019
+            2 { switch ($ExchangeInstall_LocalizedStrings.ExchangeRole) { ## Checking the roles to install for 2019
                     0 { if((Get-Item $SetupExePath -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.02.0986.005") {
                             $exSetupLine = ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF')
                         }
@@ -852,7 +886,7 @@ switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking whether is ins
                     }
                 }
             }
-            1 { switch ($ExchangeInstall_LocalizedStrings.res_0005) { ## Checking the roles to install for 2016
+            1 { switch ($ExchangeInstall_LocalizedStrings.ExchangeRole) { ## Checking the roles to install for 2016
                     0 { if((Get-Item $SetupExePath -ErrorAction Ignore).VersionInfo.ProductVersion -ge "15.01.2375.007") {
                             $exSetupLine =  ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms_DiagnosticDataOFF') 
                         }
@@ -865,7 +899,7 @@ switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking whether is ins
                     }
                 }
             }
-            0 { switch ($ExchangeInstall_LocalizedStrings.res_0005) { ## Checking the roles to install for 2013
+            0 { switch ($ExchangeInstall_LocalizedStrings.ExchangeRole) { ## Checking the roles to install for 2013
                     0 { $exSetupLine =  ($exInstallPath + ' /mode:install /roles:mb,ca /IAcceptExchangeServerLicenseTerms') }
                     1 { $exSetupLine =  ($exInstallPath + ' /mode:install /roles:mb /IAcceptExchangeServerLicenseTerms') }
                     2 { $exSetupLine =  ($exInstallPath + ' /mode:install /roles:ca /IAcceptExchangeServerLicenseTerms') }
@@ -873,21 +907,24 @@ switch ($ExchangeInstall_LocalizedStrings.res_0004) { ## Checking whether is ins
                 }
             }
         }
-        if($ExchangeInstall_LocalizedStrings.res_0028 -eq 1 -and $ExchangeInstall_LocalizedStrings.res_0029 -ne $null ) {
-        $exSetupLine = $exSetupLine + " /OrganizationName:" + $ExchangeInstall_LocalizedStrings.res_0029
+        if($ExchangeInstall_LocalizedStrings.ExchangeOrgMissing -eq 1 -and $ExchangeInstall_LocalizedStrings.ExchangeOrgName -ne $null ) {
+        $exSetupLine = $exSetupLine + " /OrganizationName:" + $ExchangeInstall_LocalizedStrings.ExchangeOrgName
     }
     Add-Content -Path $installBat -Value $exSetupLine
     }
     1 { Add-Content -Path $installBat -Value ($exInstallPath + ' /mode:recoverserver /IAcceptExchangeServerLicenseTerms') } ## Exchange recover server
 }
 Write-Host "COMPLETE"
-## Check for and install Windows prequisite roles and features
+#endregion
+#region Install Windows prequisite roles and features
 Write-Host "Installing required Windows features for Exchange..." -ForegroundColor Green -NoNewline
-switch ($ExchangeInstall_LocalizedStrings.res_0003) { ## Checking the version of Exchange
+switch ($ExchangeInstall_LocalizedStrings.ExchangeVersion) { ## Checking the version of Exchange
     0 { Install-WindowsFeature Server-Media-Foundation, NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation, Failover-Clustering, RSAT-ADDS }
     1 { Install-WindowsFeature NET-Framework-45-Features, Server-Media-Foundation, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation, Failover-Clustering,RSAT-ADDS }
-    2 { if($ExchangeInstall_LocalizedStrings.res_0037 -eq 1) {Install-WindowsFeature Server-Media-Foundation, NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Metabase, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Failover-Clustering, RSAT-ADDS}
+    2 { if($ExchangeInstall_LocalizedStrings.ServerCore -eq 1) {Install-WindowsFeature Server-Media-Foundation, NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Metabase, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Failover-Clustering, RSAT-ADDS}
         else {Install-WindowsFeature Server-Media-Foundation, NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation,Failover-Clustering, RSAT-ADDS }}
 }
 Write-Host "COMPLETE"
 Restart-Computer -Force
+#endregion
+#endregion
