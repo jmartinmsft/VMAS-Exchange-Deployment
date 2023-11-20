@@ -1,9 +1,9 @@
 ﻿<#
 # Deploy-ExchangeServer.ps1
-# Modified 16 November 2022
+# Modified 20 November 2023
 # Last Modifier:  Jim Martin
 # Project Owner:  Jim Martin
-# Version: v20221116.0941
+# Version: v20231120.0922
 # Syntax for running this script:
 #
 # .\Deploy-ExchangeServer.ps1
@@ -31,7 +31,7 @@ function Test-ADAuthentication {
     $UserName = $UserName.Substring(0, $UserName.IndexOf("@"))
     (New-Object DirectoryServices.DirectoryEntry "",$UserName,$Password).PsBase.Name -ne $null
 }
-function Check-ServerCore {
+function CheckServerCore {
     if((Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\').InstallationType -eq "Server Core") {
         Add-Content -Path $serverVarFile -Value ('ServerCore = 1')
         $SetupExePath = $SetupExePath.Replace("\","\\")
@@ -51,7 +51,7 @@ function Get-ExchangeISO {
         $exchISO = $exchISO.Replace("\","\\")
         Add-Content -Path $serverVarFile -Value ('ExchISOPath = ' + $exchISO)
 }
-function Prompt-ExchangeDownload {
+function PromptExchangeDownload {
     $yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Yes'
     $no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'No'
     $yesNoOption = [System.Management.Automation.Host.ChoiceDescription[]]($yes, $no)
@@ -59,9 +59,9 @@ function Prompt-ExchangeDownload {
     if($downloadResult -eq 0) {
         switch($exVersion) {
             2{  
-                Write-Host "Downloading Exchange 2019 CU12..." -ForegroundColor Green -NoNewline
-                $Url = "https://download.microsoft.com/download/b/c/7/bc766694-8398-4258-8e1e-ce4ddb9b3f7d/ExchangeServer2019-x64-CU12.ISO"
-                $Path = "C:\Temp\Exchange2019_CU12.iso"
+                Write-Host "Downloading Exchange 2019 CU13..." -ForegroundColor Green -NoNewline
+                $Url = "https://download.microsoft.com/download/7/5/f/75f4d77e-002c-419c-a03a-948e8eb019f2/ExchangeServer2019-x64-CU13.ISO"
+                $Path = "C:\Temp\Exchange2019_CU13.iso"
                 $webClient = New-Object System.Net.WebClient
                 $webClient.DownloadFile($url, $Path)
                 Write-Host "COMPLETE"
@@ -105,7 +105,7 @@ function Prompt-ExchangeDownload {
         }
     }
 }
-function Check-ExchangeVersion {
+function CheckExchangeVersion {
     $latestVersion = 0
     Get-ExchangeServer | ForEach-Object {
         [int]$serverVersion = $_.AdminDisplayVersion.Substring(11,1)
@@ -118,9 +118,9 @@ function Check-ExchangeVersion {
 function Move-MailboxDatabase {
     param ( [Parameter(Mandatory=$true)][string]$database )
     $stopDbCheck = $false
-    $bestEffort = $false
+    #$bestEffort = $false
     while($stopDbCheck -eq $false) {
-        $copyStatus = Get-MailboxDatabaseCopyStatus $database | Where {$_.Status -ne "Mounted"}
+        $copyStatus = Get-MailboxDatabaseCopyStatus $database | Where-Object {$_.Status -ne "Mounted"}
         [string]$healthyCopy = $null
         foreach($c in $copyStatus) {
             if($c.ContentIndexState -eq "Healthy" -and $c.CopyQueueLength -eq 0 -and $c.Status -eq "Healthy") {
@@ -148,9 +148,9 @@ function Move-MailboxDatabase {
 function Move-MailboxDatabaseBestEffort {
     param ( [Parameter(Mandatory=$true)][string]$database)
     $stopDbCheck = $false
-    $bestEffort = $false
+    #$bestEffort = $false
     while($stopDbCheck -eq $false) {
-        $copyStatus = Get-MailboxDatabaseCopyStatus $database | Where {$_.Status -ne "Mounted"}
+        $copyStatus = Get-MailboxDatabaseCopyStatus $database | Where-Object {$_.Status -ne "Mounted"}
         [string]$healthyCopy = $null
         foreach($c in $copyStatus) {
             if($c.Status -eq "Healthy") {
@@ -166,7 +166,7 @@ function Move-MailboxDatabaseBestEffort {
             return $false
         }
     }
-    if($healthyCopy -ne $null) {
+    if($null -ne $healthyCopy) {
         Write-Host "Moving database to $healthyCopy with best effort" -ForegroundColor Green
         if(Test-Connection $healthyCopy -Count 1) {
             $moveSuccess = (Move-ActiveMailboxDatabase $database -SkipClientExperienceChecks -MountDialOverride:BestEffort -SkipHealthChecks -Confirm:$False -ErrorAction SilentlyContinue).Status
@@ -190,19 +190,19 @@ function Move-MailboxDatabaseBestEffort {
 function Get-DAGIPAddress {
     ## There must be at least one IP address for the DAG but there may be more
     $dagIPAddresses = New-Object System.Collections.ArrayList
-    $checkDagIP = $null
+    #$checkDagIP = $null
     [int]$x = 1 ## Count for the number of DAG IP addresses
     $addDagIP = $true
     ## Add IP addresses for the DAG until a null value is supplied
     while($addDagIP -eq $true) {
         $ipCheck = $null
         ## Get input from the user
-        $dagIPAddress = AskFor-DAGIPAddress $x
+        $dagIPAddress = AskForDAGIPAddress $x
         ## Verify the format of the input
         if($dagIPAddress.Length -ne 0) {
             $ipCheck = Test-IP($dagIPAddress)
             ## Verify the IP address is not in use
-            if($ipCheck -ne $null) {
+            if($null -ne $ipCheck) {
                 if(Test-Connection $dagIPAddress -Count 1 -ErrorAction Ignore) {
                     Write-Warning "IP addresses provided already in use"
                     $dagIPAddress = $null
@@ -214,7 +214,7 @@ function Get-DAGIPAddress {
             if($dagIPAddress.Length -gt 0) {
                 $dagIPAddresses.Add($dagIPAddress) | Out-Null
                 $x++
-                $checkDagIP = $null
+                #$checkDagIP = $null
             }
         }
         else {
@@ -226,7 +226,7 @@ function Get-DAGIPAddress {
     }
     Add-Content -Path $serverVarFile -Value ('DagIpAddress = ' + $dagIPAddresses)
 }
-function AskFor-DAGIPAddress {
+function AskForDAGIPAddress {
     param([int]$ipCount)
     $dagIP = $null
     $dagIP = Read-HostWithColor "Enter the Database Availability Group IP Addresses[$ipCount]: "
@@ -306,14 +306,14 @@ function Test-IP() {
 }
 function Get-ExchangeExe {
     ## Add something to get the Exchange install path
-    [string]$exchSetupExe = (Get-Volume | where {$_.FileSystemLabel -like "EXCHANGESERVER*"}).DriveLetter
+    [string]$exchSetupExe = (Get-Volume | Where-Object {$_.FileSystemLabel -like "EXCHANGESERVER*"}).DriveLetter
     $exchSetupExe = "$($exchSetupExe):\\setup.exe"
     Add-Content -Path $serverVarFile -Value ('ExchSetupPath = ' + $exchSetupExe)
     return $exchSetupExe
 }
-function Validate-DagName {
+function ValidateDagName {
     ## Verify the DAG name provided is present
-    if((Get-DatabaseAvailabilityGroup $DagName -ErrorAction SilentlyContinue).Name -ne $null) { return $true }
+    if($null -ne (Get-DatabaseAvailabilityGroup $DagName -ErrorAction SilentlyContinue).Name) { return $true }
     else { return $false }
 }
 function Get-CertificateFromServerCheck {
@@ -328,7 +328,7 @@ function Get-CertificateFromServerCheck {
 function Get-ServerCertificate {
     ## Determine the SSL binding information for the Default Web Site
     $scriptBlock = { Import-Module WebAdministration;
-        (Get-WebBinding -Name "Default Web Site" -Protocol https | Where {$_.bindingInformation -notlike "127.0.0.1:443:" }).certificateHash
+        (Get-WebBinding -Name "Default Web Site" -Protocol https | Where-Object {$_.bindingInformation -notlike "127.0.0.1:443:" }).certificateHash
     }
     Set-Item -Path WSMan:\localhost\Client\TrustedHosts -Value $certServer -Force
     $session = New-PSSession -Credential $credential -ComputerName $certServer -Name CertificateConfig
@@ -355,7 +355,7 @@ function Get-ServerCertificate {
     Remove-PSSession -Name CertificateConfig
     
     }
-function Create-NewDAG {
+function CreateNewDAG {
     ## Get information for create a new database availability group
     $DagName = Read-HostWithColor "Enter the name for the new Database Availability Group: "
     Add-Content -Path $serverVarFile -Value ('DagName = ' + $DagName)
@@ -377,18 +377,18 @@ function Skip-DagCheck {
     }
     return $false
 }
-function Check-NewDeployment {
+function CheckNewDeployment {
     ## If this is a new deployment of multiple servers we may not was to validate the DAG
     $validDag = Skip-DagCheck
     if($validDag -eq $false) {
-        Create-NewDAG 
+        CreateNewDAG 
     }
     else {
         $DagName = Read-HostWithColor "Enter the Database Availability Group name: "
         Add-Content -Path $serverVarFile -Value ('DagName = ' + $DagName)
     }
 }
-function Create-ServerVariableFile {
+function CreateServerVariableFile {
     ## Create psd1 with variables for the VM to use for setup
     $serverVarFileName = "c:\Temp\$ServerName-ExchangeInstall-strings.psd1"
     if(Get-Item $serverVarFileName -ErrorAction Ignore) {Remove-Item $serverVarFileName -Confirm:$false -ErrorAction Ignore -Force}
@@ -396,17 +396,18 @@ function Create-ServerVariableFile {
     New-Item $serverVarFileName -ItemType File -ErrorAction SilentlyContinue | Out-Null
     Add-Content -Path $serverVarFileName -Value "ConvertFrom-StringData @'"
     Add-Content -Path $serverVarFileName -Value '###PSLOC'
+    Add-Content -Path $serverVarFileName -Value 'ServerType = 0'
     return $serverVarFileName
 }
 #region Start script
 [string]$ServerName = $env:COMPUTERNAME
-$serverVarFile = Create-ServerVariableFile
+$serverVarFile = CreateServerVariableFile
 Add-Content -Path $serverVarFile -Value ('ServerName = ' + $ServerName)
 Write-Warning "You will have the option to download the Exchange installation files if they aren't already available."
 Add-Type -AssemblyName System.Windows.Forms
 #endregion
 #region Server core check
-$isServerCore = Check-ServerCore
+$isServerCore = CheckServerCore
 if($isServerCore -eq $true -and $SetupExePath -like $null) {
         Write-Warning "You must specify the setup path when running Server Core."
         Remove-Item -Path $serverVarFile -Force
@@ -422,7 +423,7 @@ if(!(Get-WindowsFeature RSAT-AD-PowerShell).Installed) {
 }
 #endregion
 #region Get admin credentials
-$validUPN = $false
+#$validUPN = $false
 $domain = $env:USERDNSDOMAIN
 $UserName = $env:USERNAME
 $upn = "$UserName@$domain"
@@ -462,7 +463,7 @@ Write-Host "Checking for an Exchange organization..." -ForegroundColor Green
 $servicesContainer = "CN=Services,CN=Configuration,$adDomain"
 $exchContainer = (Get-ADObject -LDAPFilter "(objectClass=msExchConfigurationContainer)" -SearchBase $servicesContainer -SearchScope OneLevel -ErrorAction Ignore).DistinguishedName
 if($exchContainer -notlike $null) {
-    $exchServersContainer = Get-ADObject -LDAPFilter "(objectClass=msExchServersContainer)" -SearchBase $exchContainer -SearchScope Subtree -ErrorAction Ignore | Where {$_.DistinguishedName -like "*FYDIBOHF23*"}
+    $exchServersContainer = Get-ADObject -LDAPFilter "(objectClass=msExchServersContainer)" -SearchBase $exchContainer -SearchScope Subtree -ErrorAction Ignore | Where-Object {$_.DistinguishedName -like "*FYDIBOHF23*"}
     if($exchServersContainer.DistinguishedName.Length -gt 0) {
         Write-Host "Checking for existing Exchange servers..." -ForegroundColor Green
         $exchServers = Get-ADObject -LDAPFilter "(objectClass=msExchExchangeServer)" -SearchBase $exchServersContainer -SearchScope OneLevel -Properties msExchCurrentServerRoles
@@ -488,7 +489,7 @@ Add-Content -Path $serverVarFile -Value ('ExchangeInstallType = ' + $exInstallTy
 #endregion
 #region Connect to remote PowerShell
 ## Check for an Exchange management session, otherwise verify there is no Exchange organization in the forest
-if(!(Get-PSSession | Where { $_.ConfigurationName -eq "Microsoft.Exchange" } )) {
+if(!(Get-PSSession | Where-Object { $_.ConfigurationName -eq "Microsoft.Exchange" } )) {
     if($exchOrgPresent -eq $true) { Connect-Exchange }
     else {
         Add-Content -Path $serverVarFile -Value ('ExchangeOrgMissing = 1')
@@ -503,7 +504,7 @@ if(!(Get-PSSession | Where { $_.ConfigurationName -eq "Microsoft.Exchange" } )) 
         }
     }
 }
-else { $exchServer = (Get-PSSession | Where { $_.ConfigurationName -eq "Microsoft.Exchange" } | Select -Last 1).ComputerName }
+else { $exchServer = (Get-PSSession | Where-Object { $_.ConfigurationName -eq "Microsoft.Exchange" } | Select-Object -Last 1).ComputerName }
 #endregion
 #region Exchange install prompts
 switch ($exInstallType) {
@@ -513,7 +514,7 @@ switch ($exInstallType) {
             $exVersion = Select-ExchangeVersion
             ## Get the latest version of Exchange in the forest
             if($exchOrgPresent -eq $true) {
-                $currentVersion = Check-ExchangeVersion
+                $currentVersion = CheckExchangeVersion
             }
             ## New forest - set current version less than 2013
             else { $currentVersion = -1 }
@@ -533,7 +534,7 @@ switch ($exInstallType) {
         ## Get the setup path for the Exchange install
         if($SetupExePath -like $null) { 
             Write-Warning "You must download the ISO before running this script."
-            Prompt-ExchangeDownload
+            PromptExchangeDownload
             $SetupExePath = Get-ExchangeExe
         }
         else{
@@ -595,11 +596,11 @@ switch ($exInstallType) {
                 if($exchOrgPresent -eq $true) {
                     ## Look for existing DAG and so admin can see what is available
                     if(Get-DatabaseAvailabilityGroup) {
-                        Get-DatabaseAvailabilityGroup | ft Name
+                        Get-DatabaseAvailabilityGroup | Format-Table Name
                         $validDag = $false
                         while($validDag -eq $false) {
                             $DagName = Read-HostWithColor "Enter the Database Availability Group name: "
-                            $validDag = Validate-DagName
+                            $validDag = ValidateDagName
                             if($validDag -eq $false) {
                                 $validDag = Skip-DagCheck
                             }
@@ -607,10 +608,10 @@ switch ($exInstallType) {
                         Add-Content -Path $serverVarFile -Value ('DagName = ' + $DagName)
                     }
                     ## Create a new DAG if there is no DAG in the environment or skip for deploying multiple servers
-                    else { Check-NewDeployment }
+                    else { CheckNewDeployment }
                 }
                 ## Cannot verify DAG so either create a new DAG or join a DAG for new deployments
-                else { Check-NewDeployment }
+                else { CheckNewDeployment }
             }
             1 { ## Get information for the new DAG
                 $yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Yes'
@@ -618,7 +619,7 @@ switch ($exInstallType) {
                 $dagTypeOption = [System.Management.Automation.Host.ChoiceDescription[]]($yes, $no)
                 $dagType = $Host.UI.PromptForChoice("Server deployment script","Do you want to create the DAG without an administrative access point? (aka:IP-less)", $dagTypeOption, 0)
                 Add-Content -Path $serverVarFile -Value ('DagType = ' + $dagType)
-                Create-NewDAG
+                CreateNewDAG
                 if($dagType -eq 1) {
                     Get-DAGIPAddress
                 }
@@ -635,7 +636,7 @@ switch ($exInstallType) {
         }
         ## Get the ISO for Exchange install
         if($SetupExePath -like $null) { 
-            Prompt-ExchangeDownload
+            PromptExchangeDownload
             Get-ExchangeExe
         }
         else{
@@ -648,7 +649,7 @@ switch ($exInstallType) {
             Get-EdgeSubscription | ForEach-Object {
                 if($_.Site -eq $serverSite) {
                     Write-Host "FOUND"
-                    $severSite = $serverSite.Substring($serverSite.IndexOf("/Sites/")+7)
+                    $serverSite = $serverSite.Substring($serverSite.IndexOf("/Sites/")+7)
                     Add-Content -Path $serverVarFile -Value ('EdgeDomain = ' + $_.Domain)
                     Add-Content -Path $serverVarFile -Value ('EdgeName = ' + $_.Name)
                     Add-Content -Path $serverVarFile -Value ('EdgeSite = ' + $serverSite)
@@ -678,9 +679,9 @@ switch ($exInstallType) {
         }
         ##Check if the Exchange server is a member of a DAG
         Write-Host "Checking if the Exchange server is a member of a DAG..." -ForegroundColor Green -NoNewline
-        if(Get-DatabaseAvailabilityGroup -DomainController $domainController | Where { $_.Servers -match $ServerName }) {
+        if(Get-DatabaseAvailabilityGroup -DomainController $domainController | Where-Object { $_.Servers -match $ServerName }) {
             Write-Host "MEMBER"
-            [string]$DagName = Get-DatabaseAvailabilityGroup -DomainController $domainController  | Where { $_.Servers -like '*' + $ServerName + '*'}
+            [string]$DagName = Get-DatabaseAvailabilityGroup -DomainController $domainController  | Where-Object { $_.Servers -like '*' + $ServerName + '*'}
             Add-Content -Path $serverVarFile -Value ('DagName = ' + $DagName)
             ## Check if the databases have multiple copies
             $dbHasCopies = $false
@@ -698,10 +699,10 @@ switch ($exInstallType) {
                         }
                     }
                     ## Get a list of databases and the replay lag times for the Exchange server
-                    $replayLagTime = [string](Get-MailboxDatabase $_.Name | Where {$_.ReplayLagTimes -like "*$ServerName*" }).ReplayLagTimes
+                    $replayLagTime = [string](Get-MailboxDatabase $_.Name | Where-Object {$_.ReplayLagTimes -like "*$ServerName*" }).ReplayLagTimes
                     $_.Name + "," + $replayLagTime | Out-File "c:\Temp\$ServerName-DatabaseCopies.txt" -Append
                     ## Get the current activation preferences for the mailbox databases in the DAG
-                    $activationPreference = [string](Get-MailboxDatabase $_.Name | Select Name -ExpandProperty ActivationPreference)
+                    $activationPreference = [string](Get-MailboxDatabase $_.Name | Select-Object Name -ExpandProperty ActivationPreference)
                     $_.Name + "," + $activationPreference | Out-File "c:\Temp\$ServerName-$DagName-ActivationPreferences.txt" -Append
                     ## Check if the database is mounted on this server
                     $dbMounted = $true
@@ -716,7 +717,7 @@ switch ($exInstallType) {
                                         Write-Warning "Failed to move the database copy to another server."
                                         exit
                                     }
-                                    Get-MailboxDatabaseCopyStatus $_.Name | ft Name,Status,CopyQueueLength,ReplayQueueLength,ContentIndexState
+                                    Get-MailboxDatabaseCopyStatus $_.Name | Format-Table Name,Status,CopyQueueLength,ReplayQueueLength,ContentIndexState
                                     $yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Yes'
                                     $no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'No'
                                     $moveOption = [System.Management.Automation.Host.ChoiceDescription[]]($yes, $no)
@@ -808,7 +809,7 @@ switch ($exInstallType) {
 $yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Yes'
 $no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'No'
 $yesNoOption = [System.Management.Automation.Host.ChoiceDescription[]]($yes, $no)
-$extendedProtectionEnabled = $Host.UI.PromptForChoice("Server deployment script","Do you want to enable Exchange Extended Protection?", $yesNoOption, 1)
+$extendedProtectionEnabled = $Host.UI.PromptForChoice("Server deployment script","Do you want to enable Exchange Extended Protection?", $yesNoOption, 0)
 switch ($extendedProtectionEnabled) {
     0 {Add-Content -Path $serverVarFile -Value ('ExchangeExtendedProtection = 0')}
     1 {Add-Content -Path $serverVarFile -Value ('ExchangeExtendedProtection = 1')}
@@ -907,7 +908,7 @@ switch ($ExchangeInstall_LocalizedStrings.ExchangeInstallType) { ## Checking whe
                 }
             }
         }
-        if($ExchangeInstall_LocalizedStrings.ExchangeOrgMissing -eq 1 -and $ExchangeInstall_LocalizedStrings.ExchangeOrgName -ne $null ) {
+        if($ExchangeInstall_LocalizedStrings.ExchangeOrgMissing -eq 1 -and $null -ne $ExchangeInstall_LocalizedStrings.ExchangeOrgName) {
         $exSetupLine = $exSetupLine + " /OrganizationName:" + $ExchangeInstall_LocalizedStrings.ExchangeOrgName
     }
     Add-Content -Path $installBat -Value $exSetupLine
@@ -919,10 +920,10 @@ Write-Host "COMPLETE"
 #region Install Windows prequisite roles and features
 Write-Host "Installing required Windows features for Exchange..." -ForegroundColor Green -NoNewline
 switch ($ExchangeInstall_LocalizedStrings.ExchangeVersion) { ## Checking the version of Exchange
-    0 { Install-WindowsFeature Server-Media-Foundation, NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation, Failover-Clustering, RSAT-ADDS }
-    1 { Install-WindowsFeature NET-Framework-45-Features, Server-Media-Foundation, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation, Failover-Clustering,RSAT-ADDS }
-    2 { if($ExchangeInstall_LocalizedStrings.ServerCore -eq 1) {Install-WindowsFeature Server-Media-Foundation, NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Metabase, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Failover-Clustering, RSAT-ADDS}
-        else {Install-WindowsFeature Server-Media-Foundation, NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation,Failover-Clustering, RSAT-ADDS }}
+    0 { Install-WindowsFeature Server-Media-Foundation, Failover-Clustering,RSAT-ADDS,NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation }
+    1 { Install-WindowsFeature Server-Media-Foundation, Failover-Clustering,RSAT-ADDS,NET-Framework-45-Core, NET-Framework-45-ASPNET, NET-WCF-HTTP-Activation45, NET-WCF-Pipe-Activation45, NET-WCF-TCP-Activation45, NET-WCF-TCP-PortSharing45, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation }
+    2 { if($ExchangeInstall_LocalizedStrings.ServerCore -eq 1) {Install-WindowsFeature Server-Media-Foundation, Failover-Clustering,RSAT-ADDS,NET-Framework-45-Core, NET-Framework-45-ASPNET, NET-WCF-HTTP-Activation45, NET-WCF-Pipe-Activation45, NET-WCF-TCP-Activation45, NET-WCF-TCP-PortSharing45, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Metabase, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI}
+        else {Install-WindowsFeature Server-Media-Foundation, Failover-Clustering,RSAT-ADDS,NET-Framework-45-Core, NET-Framework-45-ASPNET, NET-WCF-HTTP-Activation45, NET-WCF-Pipe-Activation45, NET-WCF-TCP-Activation45, NET-WCF-TCP-PortSharing45, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation}}
 }
 Write-Host "COMPLETE"
 Restart-Computer -Force
