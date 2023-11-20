@@ -165,13 +165,12 @@ Log([string]::Format("Running the Step2 script now.")) Gray
 Log([string]::Format("Getting server name.")) Gray
 ## Get the server name from the registry
 while($ServerName.Length -lt 1) {
-    $ServerName = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Virtual Machine\Guest\Parameters").VirtualMachineName
+    $ServerName = $env:COMPUTERNAME
     if($null -eq $ServerName) { Start-Sleep -Seconds 5}
 }
 
 ## Get variables from previous user input
 Log([string]::Format("Getting variables for setup.")) Gray
-Import-LocalizedData -BindingVariable UserCreds_LocalizedStrings -FileName "Sysprep-strings.psd1"
 Import-LocalizedData -BindingVariable ExchangeInstall_LocalizedStrings -FileName $ServerName"-ExchangeInstall-strings.psd1"
 
 ## Set AutoLogon for the next step

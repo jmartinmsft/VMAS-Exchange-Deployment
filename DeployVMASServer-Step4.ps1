@@ -319,7 +319,7 @@ Log([string]::Format("Running the Step4 script now.")) Yellow
 ## Get the server name from the registry
 Log([string]::Format("Getting server name.")) Gray
 while($ServerName.Length -lt 1) {
-    $ServerName = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Virtual Machine\Guest\Parameters" -ErrorAction Ignore).VirtualMachineName
+    $ServerName = $env:COMPUTERNAME
     if($null -eq $ServerName) { Start-Sleep -Seconds 5}
 }
 

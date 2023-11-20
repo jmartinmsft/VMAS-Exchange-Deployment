@@ -267,7 +267,7 @@ Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Wi
 ## Get the server name from the registry
 Log([string]::Format("Getting server name.")) Gray
 while($ServerName.Length -lt 1) {
-    $ServerName = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Virtual Machine\Guest\Parameters" -ErrorAction Ignore).VirtualMachineName
+    $ServerName = $env:COMPUTERNAME
     if($null -eq $ServerName) { Start-Sleep -Seconds 5}
 }
 ## Get variables from previous user input
