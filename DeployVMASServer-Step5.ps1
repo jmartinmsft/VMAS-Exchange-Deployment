@@ -273,7 +273,6 @@ while($ServerName.Length -lt 1) {
 ## Get variables from previous user input
 Log([string]::Format("Getting variables for setup.")) Gray
 Import-LocalizedData -BindingVariable ExchangeInstall_LocalizedStrings -FileName $ServerName"-ExchangeInstall-strings.psd1"
-Import-LocalizedData -BindingVariable UserCreds_LocalizedStrings -FileName "Sysprep-strings.psd1"
 
 if($ExchangeInstall_LocalizedStrings.EdgeRole -ne 1) {
     ## Verify that the domain can be resolved before continuing
