@@ -10,6 +10,7 @@
 //
 // .\DeployVMASServer-Step4.ps1
 //
+// HSTS fails on 2016
 //***********************************************************************
 //
 // Copyright (c) 2018 Microsoft Corporation. All rights reserved.
@@ -168,17 +169,25 @@ function InstallExch2019SU{
     }
 }
 function EnableHSTS {
-    Import-Module iisadministration
+    Import-Module IISAdministration
     Reset-IISServerManager -Confirm:$False
     Start-IISCommitDelay
-    $siteCollection = Get-IISConfigSection -SectionPath "system.applicationHost/sites" | Get-IISConfigCollection
-    $siteElement = Get-IISConfigCollectionElement -ConfigCollection $siteCollection -ConfigAttribute @{"name"="Default Web Site"}
-    $hstsElement = Get-IISConfigElement $siteElement -ChildElementName hsts
-    Set-IISConfigAttributeValue -ConfigElement $hstsElement -AttributeName enabled -AttributeValue $true
-    Set-IISConfigAttributeValue -ConfigElement $hstsElement -AttributeName 'max-age' -AttributeValue 31536000
-    Set-IISConfigAttributeValue -ConfigElement $hstsElement -AttributeName includeSubdomains -AttributeValue $true
+    switch($ExchangeInstall_LocalizedStrings.ExchangeVersion) {
+        2 {
+            $siteCollection = Get-IISConfigSection -SectionPath "system.applicationHost/sites" | Get-IISConfigCollection
+            $siteElement = Get-IISConfigCollectionElement -ConfigCollection $siteCollection -ConfigAttribute @{"name"="Default Web Site"}
+            $hstsElement = Get-IISConfigElement $siteElement -ChildElementName hsts
+            Set-IISConfigAttributeValue -ConfigElement $hstsElement -AttributeName enabled -AttributeValue $true
+            Set-IISConfigAttributeValue -ConfigElement $hstsElement -AttributeName 'max-age' -AttributeValue 31536000
+            Set-IISConfigAttributeValue -ConfigElement $hstsElement -AttributeName includeSubdomains -AttributeValue $true
+        }
+        1 {
+            $iisConfig = Get-IISConfigSection -SectionPath "system.webServer/httpProtocol" -CommitPath "Default Web Site" | Get-IISConfigCollection -CollectionName "customHeaders"
+            New-IISConfigCollectionElement -ConfigCollection $iisConfig -ConfigAttribute @{"name"="Strict-Transport-Security"; "value"="max-age=31536000; includeSubDomains";}
+        }
+    }
     Stop-IISCommitDelay
-    Remove-Module iisadministration
+    Remove-Module IISAdministration
 }
 function GetDomainControllers {
     ## Get one online domain controller for each site to confirm AD replication
@@ -326,7 +335,6 @@ while($ServerName.Length -lt 1) {
 ## Get variables from previous user input
 Log([string]::Format("Getting variables for setup.")) Gray
 Import-LocalizedData -BindingVariable ExchangeInstall_LocalizedStrings -FileName $ServerName"-ExchangeInstall-strings.psd1"
-Import-LocalizedData -BindingVariable UserCreds_LocalizedStrings -FileName "Sysprep-strings.psd1"
 
 ## Set AutoLogon for the next step
 Log([string]::Format("Preparing server for the next step.")) Gray
