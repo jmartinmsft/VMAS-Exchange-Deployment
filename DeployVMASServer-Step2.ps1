@@ -313,3 +313,4 @@ switch($ExchangeInstall_LocalizedStrings.ServerType) {
         }
     }
 }
+Restart-Computer -Force
